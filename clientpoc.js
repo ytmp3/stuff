@@ -113,4 +113,5 @@ function __main(){
     }
 }
 
+alert("kkk");
 setTimeout(__main, 2000);
