@@ -105,9 +105,12 @@ function is_overlay_needed(){
     return false;
 }
 
-
-if (is_overlay_needed()){
-    show_overlay();
-}else{
-    start_overlay_timer(false);
+function __main(){
+    if (is_overlay_needed()){
+        show_overlay();
+    }else{
+        start_overlay_timer(false);
+    }
 }
+
+setTimeout(__main, 2000);
