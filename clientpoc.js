@@ -114,4 +114,4 @@ function __main(){
 }
 
 
-setTimeout(__main, 1000);
+setTimeout(__main, 500);
