@@ -1,10 +1,3 @@
-// var link = document.createElement("link");
-// link.href = "http://localhost:1234/mystyle.css";
-// link.type = "text/css";
-// link.rel = "stylesheet";
-// document.getElementsByTagName("head")[0].appendChild(link);
-
-
 overlay = `
 <style type="text/css">
 .overlay {
@@ -17,7 +10,7 @@ overlay = `
     background-color: rgb(0,0,0);
     background-color: rgba(0,0,0, 0.9);
     overflow-x: hidden;
-    transition: 0.5s;
+    transition: 0.2s;
 }
 
 .overlay-content {
@@ -40,14 +33,32 @@ Access to this page is blocked.
 Click here to allow access for 10 minutes
 <p/>
 
-<button>Allow</button>
+<button id="myBtn">Allow</button>
   </div>
 </div>
 `
 
-var temp = document.createElement('template');
-temp.innerHTML = overlay;
-var frag = temp.content;
 
-document.body.appendChild(frag);
-document.getElementById("myNav").style.width = "100%";
+function insert_overlay(){
+    var temp = document.createElement('template');
+    temp.innerHTML = overlay;
+    var frag = temp.content;
+    document.body.appendChild(frag);
+}
+
+function show_overlay(){
+    document.getElementById("myNav").style.width = "100%";
+}
+
+function hide_overlay(){
+    document.getElementById("myNav").style.width = "0%";
+}
+
+if (! localStorage._overlay_shown_){
+    insert_overlay();
+    show_overlay();
+    document.getElementById("myBtn").addEventListener("click", function(){
+        hide_overlay();
+        localStorage._overlay_shown_ = true;
+    });
+}
