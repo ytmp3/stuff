@@ -1,42 +1,71 @@
 var url = require('url');
 var http = require('http');
 var process = require('process');
-var base64 = require('base64-stream');
-// var {Base64Encode} = require('base64-stream');
+// var base64 = require('base64-stream');
 
 var Base64encode = require('base64-stream').encode;
 
-var page=`
-<html>
-<body>
-hello
-</body>
-</html>
-`;
+    var pre_data=`<!DOCTYPE html><html><head>
+<script src="http://localhost:1234/pako_inflate.min.js"></script>
+<script type="text/javascript">
+page_content='`;
+    var post_data_inflate=`';
 
+window.addEventListener("load", function(event) {
+    alert("Click to navigate");
+    debased = atob(page_content);
+    unzipped = pako.inflate(debased);
+    text = String.fromCharCode.apply(null, new Uint8Array(unzipped));
+    document.write(text);
+});
+    </script>
+  </head>
+  <body>THIS IS THE INJECTED PAGE</body>
+</html>`;
+
+    var post_data=`';
+
+window.addEventListener("load", function(event) {
+    alert("Click to navigate");
+    debased = atob(page_content);
+    document.write(debased);
+});
+    </script>
+  </head>
+  <body>THIS IS THE INJECTED PAGE</body>
+</html>`;
+
+
+/**
+ * handle client request
+ */
 function onServerReceiveRequest(request, response) {
-    console.log("======================================================================");
+    console.log("=========================================================");
     console.log("===> got request from browser");
     console.log(request.headers['host']);
     console.log(request.url);
 
     var parsedUrl = url.parse(request.url);
-    console.log("pathname=", parsedUrl.pathname);
-    console.log("search=", parsedUrl.search);
+    // console.log("pathname=", parsedUrl.pathname);
+    // console.log("search=", parsedUrl.search);
 
     var path = (parsedUrl.search != null)?
         parsedUrl.pathname + parsedUrl.search :
         parsedUrl.pathname;
 
+    console.log("hostname=", parsedUrl.hostname);
+
     var must_inject = false;
     var pre_injected = false;
+    var resp_encoding = null;
 
-    request.headers["Accept-Encoding"] = "identity";
+    // prevent compression of the server response
+    // request.headers["Accept-Encoding"] = "identity";
 
     // todo port/host
     var options = {
-        port: 80,
-        host: request.headers['host'],
+        // port: 80,
+        host: parsedUrl.hostname,
         method: request.method,
         headers: request.headers,
         path: path
@@ -44,22 +73,10 @@ function onServerReceiveRequest(request, response) {
 
     console.log(options.path);
 
-
-    var pre_data=`<!DOCTYPE html><html><head>
-<script type="text/javascript">
-page_content='`;
-    var post_data=`';
-
-window.addEventListener("load", function(event) {
-    alert("Click to navigate");
-    decoded = atob(page_content);
-    document.write(decoded);
-});
-    </script>
-  </head>
-  <body>THIS IS THE INJECTED PAGE</body>
-</html>`;
-
+    /**
+     * relay response received from server to the client.  perform
+     * script injection and base64 the content into a js variable.
+     */
     var responseListener = function (proxy_response) {
         var b64 = new Base64encode();
         b64.pipe(response);
@@ -73,9 +90,7 @@ window.addEventListener("load", function(event) {
                     response.write(pre_data);
                     pre_injected = true;
                 }
-                // response.write(chunk, 'binary');
                 b64.write(chunk);
-                // response.write(bufpage, 'binary');
             }
             else{
                 response.write(chunk, 'binary');
@@ -84,15 +99,17 @@ window.addEventListener("load", function(event) {
         proxy_response.addListener('end', function() {
             console.log("got server end");
             if (must_inject){
-                response.end(post_data);
+                if (resp_encoding && resp_encoding=="gzip"){
+                    response.end(post_data_inflate);
+                }else{
+                    response.end(post_data);
+                }
             }else{
                 response.end();
             }
         });
 
         console.log("===> got response from server", proxy_response.statusCode);
-
-        // process.exit(1);
 
         var content_type = proxy_response.headers["content-type"];
 
@@ -104,12 +121,18 @@ window.addEventListener("load", function(event) {
 
         console.log(content_type, must_inject);
 
-        // must_inject = false;
+        resp_encoding = proxy_response.headers["content-encoding"];
+        console.log("resp recv from server: content encoding: ",
+                    resp_encoding);
+        console.log("resp recv from server: transfer encoding: ",
+                    proxy_response.headers["transfer-encoding"]);
+
         if (must_inject){
             console.log("===> inject");
             proxy_response.headers["transfer-encoding"] = 'chunked';
             // delete proxy_response.headers["transfer-encoding"];
             delete proxy_response.headers["content-encoding"];
+
             // delete proxy_response.headers["content-length"];
             // proxy_response.headers["content-length"] = page.length;
         }
@@ -122,7 +145,9 @@ window.addEventListener("load", function(event) {
 
     var proxy_request = http.request(options, responseListener);
 
-
+    /**
+     * handle request content (if any)
+     */
     request.addListener('data', function(chunk) {
         console.log("got client data");
         proxy_request.write(chunk, 'binary');
@@ -134,4 +159,6 @@ window.addEventListener("load", function(event) {
     });
 }
 
-http.createServer(onServerReceiveRequest).listen(8080);
+var port=8080;
+console.log("proxy started on port", port);
+http.createServer(onServerReceiveRequest).listen(port);
