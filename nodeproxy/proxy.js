@@ -1,3 +1,4 @@
+var net = require('net');
 var url = require('url');
 var http = require('http');
 var process = require('process');
@@ -6,7 +7,7 @@ var process = require('process');
 var Base64encode = require('base64-stream').encode;
 
     var pre_data=`<!DOCTYPE html><html><head>
-<script src="http://localhost:1234/pako_inflate.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.6/pako_inflate.min.js"></script>
 <script type="text/javascript">
 page_content='`;
     var post_data_inflate=`';
@@ -17,6 +18,7 @@ window.addEventListener("load", function(event) {
     unzipped = pako.inflate(debased);
     text = String.fromCharCode.apply(null, new Uint8Array(unzipped));
     document.write(text);
+    setTimeout(function(){alert("I am still here");}, 5000);
 });
     </script>
   </head>
@@ -161,4 +163,28 @@ function onServerReceiveRequest(request, response) {
 
 var port=8080;
 console.log("proxy started on port", port);
-http.createServer(onServerReceiveRequest).listen(port);
+httpServer = http.createServer(onServerReceiveRequest);
+
+
+
+httpServer.on('connect', function(req, socket, head) {
+    console.log("got connect");
+
+    var addr = req.url.split(':');
+    //creating TCP connection to remote server
+    var conn = net.connect(addr[1] || 443, addr[0], function() {
+        // tell the client that the connection is established
+        socket.write('HTTP/' + req.httpVersion + ' 200 OK\r\n\r\n', 'UTF-8', function() {
+            // creating pipes in both ends
+            conn.pipe(socket);
+            socket.pipe(conn);
+        });
+    });
+
+    conn.on('error', function(e) {
+        console.log("Server connection error: " + e);
+        socket.end();
+    });
+});
+
+httpServer.listen(port);
