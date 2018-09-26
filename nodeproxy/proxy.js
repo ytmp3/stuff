@@ -13,12 +13,35 @@ page_content='`;
     var post_data_inflate=`';
 
 window.addEventListener("load", function(event) {
-    alert("Click to navigate");
+debugger;
+    alert("Click to navigate!");
     debased = atob(page_content);
     unzipped = pako.inflate(debased);
     text = String.fromCharCode.apply(null, new Uint8Array(unzipped));
-    document.write(text);
-    setTimeout(function(){alert("I am still here");}, 5000);
+//    document.write(text);
+
+    var dp = new DOMParser();
+    var doc = dp.parseFromString(text, "text/html");
+
+    var meta = document.createElement('meta');
+    meta.httpEquiv = "Content-Security-Policy";
+    meta.content = "script-src  'unsafe-inline'";
+    doc.getElementsByTagName('head')[0].appendChild(meta);
+
+    document.replaceChild(
+    document.importNode(doc.documentElement, true),
+    document.documentElement);
+
+/*document.addEventListener("DOMContentLoaded", function(){
+
+    var meta = document.createElement('meta');
+    meta.httpEquiv = "Content-Security-Policy";
+    meta.content = "script-src  'unsafe-inline'";
+    document.getElementsByTagName('head')[0].appendChild(meta);
+});
+*/
+
+    // setTimeout(function(){alert("I am still here");}, 5000);
 });
     </script>
   </head>
@@ -28,9 +51,32 @@ window.addEventListener("load", function(event) {
     var post_data=`';
 
 window.addEventListener("load", function(event) {
-    alert("Click to navigate");
+    alert("Click to navigate!");
     debased = atob(page_content);
     document.write(debased);
+    document.close();
+/*
+
+    setTimeout(function(){
+      var meta = document.createElement('meta');
+      meta.httpEquiv = "Content-Security-Policy";
+      meta.content = "script-src  'unsafe-inline'";
+      document.getElementsByTagName('head')[0].appendChild(meta);
+   }, 1000);
+*/
+/*
+    var dp = new DOMParser();
+    var doc = dp.parseFromString(debased, "text/html");
+
+    // var meta = document.createElement('meta');
+    // meta.httpEquiv = "Content-Security-Policy";
+    // meta.content = "script-src  'unsafe-inline'";
+    // doc.getElementsByTagName('head')[0].appendChild(meta);
+
+    document.replaceChild(
+    document.importNode(doc.documentElement, true),
+    document.documentElement);
+*/
 });
     </script>
   </head>
@@ -62,7 +108,7 @@ function onServerReceiveRequest(request, response) {
     var resp_encoding = null;
 
     // prevent compression of the server response
-    // request.headers["Accept-Encoding"] = "identity";
+    request.headers["Accept-Encoding"] = "identity";
 
     // todo port/host
     var options = {
@@ -139,6 +185,7 @@ function onServerReceiveRequest(request, response) {
             // proxy_response.headers["content-length"] = page.length;
         }
 
+        proxy_response.headers["Content-Security-Policy"] = `script-src  'unsafe-inline'`;
         console.log(proxy_response.headers);
         response.writeHead(proxy_response.statusCode,
                            proxy_response.headers);
@@ -168,7 +215,7 @@ httpServer = http.createServer(onServerReceiveRequest);
 
 
 httpServer.on('connect', function(req, socket, head) {
-    console.log("got connect");
+    // console.log("got connect");
 
     var addr = req.url.split(':');
     //creating TCP connection to remote server
