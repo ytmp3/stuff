@@ -36,7 +36,6 @@ function build_template_post(args){
     ${args.inline_js}
     </script>
   </head>
-  <body>THIS IS THE INJECTED PAGE</body>
 </html>`;
     return post_data;
 }
