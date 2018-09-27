@@ -19,8 +19,8 @@ const DISABLE_COMPRESSION = true;
 function build_template_pre(args){
     let pre_data=`<!DOCTYPE html>
 <html>
-   <meta charset="utf-8"/>
    <head>
+     <meta charset="utf-8"/>
      <script src="${PAKO_CDN_URL}"></script>
 
      <script type="text/javascript">
