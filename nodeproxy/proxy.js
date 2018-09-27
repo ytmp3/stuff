@@ -1,225 +1,178 @@
+var fs = require('fs');
 var net = require('net');
 var url = require('url');
 var http = require('http');
 var process = require('process');
-// var base64 = require('base64-stream');
-
 var Base64encode = require('base64-stream').encode;
 
-    var pre_data=`<!DOCTYPE html><html><head>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.6/pako_inflate.min.js"></script>
-<script type="text/javascript">
-page_content='`;
-    var post_data_inflate=`';
+/* cdn to load the 'pako' compression library */
+const PAKO_CDN_URL =
+        'https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.6/pako_inflate.min.js';
 
-window.addEventListener("load", function(event) {
-debugger;
-    alert("Click to navigate!");
-    debased = atob(page_content);
-    unzipped = pako.inflate(debased);
-    text = String.fromCharCode.apply(null, new Uint8Array(unzipped));
-//    document.write(text);
+/**
+ * build injected template
+ *
+ * args = {inline_js: '', compressed: true}
+ */
+function build_template_pre(args){
+    let pre_data=`<!DOCTYPE html>
+<html>
+   <meta charset="utf-8"/>
+   <head>
+     <script src="${PAKO_CDN_URL}"></script>
 
-    var dp = new DOMParser();
-    var doc = dp.parseFromString(text, "text/html");
+     <script type="text/javascript">
+      var compressed=${args.compressed};
+      var page_content="`;
 
-    var meta = document.createElement('meta');
-    meta.httpEquiv = "Content-Security-Policy";
-    meta.content = "script-src  'unsafe-inline'";
-    doc.getElementsByTagName('head')[0].appendChild(meta);
+    return pre_data;
+}
 
-    document.replaceChild(
-    document.importNode(doc.documentElement, true),
-    document.documentElement);
+function build_template_post(args){
+    var post_data=`";
 
-/*document.addEventListener("DOMContentLoaded", function(){
-
-    var meta = document.createElement('meta');
-    meta.httpEquiv = "Content-Security-Policy";
-    meta.content = "script-src  'unsafe-inline'";
-    document.getElementsByTagName('head')[0].appendChild(meta);
-});
-*/
-
-    // setTimeout(function(){alert("I am still here");}, 5000);
-});
+    ${args.inline_js}
     </script>
   </head>
   <body>THIS IS THE INJECTED PAGE</body>
 </html>`;
-
-    var post_data=`';
-
-window.addEventListener("load", function(event) {
-    alert("Click to navigate!");
-    debased = atob(page_content);
-    document.write(debased);
-    document.close();
-/*
-
-    setTimeout(function(){
-      var meta = document.createElement('meta');
-      meta.httpEquiv = "Content-Security-Policy";
-      meta.content = "script-src  'unsafe-inline'";
-      document.getElementsByTagName('head')[0].appendChild(meta);
-   }, 1000);
-*/
-/*
-    var dp = new DOMParser();
-    var doc = dp.parseFromString(debased, "text/html");
-
-    // var meta = document.createElement('meta');
-    // meta.httpEquiv = "Content-Security-Policy";
-    // meta.content = "script-src  'unsafe-inline'";
-    // doc.getElementsByTagName('head')[0].appendChild(meta);
-
-    document.replaceChild(
-    document.importNode(doc.documentElement, true),
-    document.documentElement);
-*/
-});
-    </script>
-  </head>
-  <body>THIS IS THE INJECTED PAGE</body>
-</html>`;
-
+    return post_data;
+}
 
 /**
  * handle client request
  */
-function onServerReceiveRequest(request, response) {
+function onProxyReceiveRequest(client_request, client_response){
     console.log("=========================================================");
     console.log("===> got request from browser");
-    console.log(request.headers['host']);
-    console.log(request.url);
+    console.log(client_request.headers['host']);
+    console.log(client_request.url);
 
-    var parsedUrl = url.parse(request.url);
+    let parsedUrl = url.parse(client_request.url);
     // console.log("pathname=", parsedUrl.pathname);
     // console.log("search=", parsedUrl.search);
 
-    var path = (parsedUrl.search != null)?
+    let path = (parsedUrl.search != null)?
         parsedUrl.pathname + parsedUrl.search :
         parsedUrl.pathname;
 
     console.log("hostname=", parsedUrl.hostname);
 
-    var must_inject = false;
-    var pre_injected = false;
-    var resp_encoding = null;
+    let must_inject = false;
+    let pre_injected = false;
+    let resp_encoding = null;
 
     // prevent compression of the server response
-    request.headers["Accept-Encoding"] = "identity";
+    client_request.headers["Accept-Encoding"] = "identity";
 
-    // todo port/host
-    var options = {
-        // port: 80,
+    let options = {
         host: parsedUrl.hostname,
-        method: request.method,
-        headers: request.headers,
+        method: client_request.method,
+        headers: client_request.headers,
         path: path
     };
 
     console.log(options.path);
 
     /**
-     * relay response received from server to the client.  perform
-     * script injection and base64 the content into a js variable.
+     * relay response received from server back to the client.
+     *
+     * perform script injection and encode to base64 the received
+     * chunk into a js letiable.
      */
-    var responseListener = function (proxy_response) {
-        var b64 = new Base64encode();
-        b64.pipe(response);
+    let onServerResponse = function (server_response) {
+        let b64encoder = new Base64encode();
+        b64encoder.pipe(client_response);
 
-        proxy_response.addListener('data', function(chunk) {
+        server_response.addListener('data', (chunk)=>{
             console.log("got server data");
 
-
             if (must_inject){
+                let compressed = (resp_encoding=="gzip");
                 if (!pre_injected){
-                    response.write(pre_data);
+                    let pre_data = build_template_pre({compressed});
+                    client_response.write(pre_data);
                     pre_injected = true;
                 }
-                b64.write(chunk);
+                b64encoder.write(chunk);
             }
             else{
-                response.write(chunk, 'binary');
+                client_response.write(chunk, 'binary');
             }
         });
-        proxy_response.addListener('end', function() {
+
+        server_response.addListener('end', ()=>{
             console.log("got server end");
             if (must_inject){
-                if (resp_encoding && resp_encoding=="gzip"){
-                    response.end(post_data_inflate);
-                }else{
-                    response.end(post_data);
-                }
+                let inline_js = fs.readFileSync("injected_page.js","utf8");;
+                let post_data = build_template_post({inline_js});
+                client_response.end(post_data);
             }else{
-                response.end();
+                client_response.end();
             }
         });
 
-        console.log("===> got response from server", proxy_response.statusCode);
+        console.log("===> got response from server", server_response.statusCode);
 
-        var content_type = proxy_response.headers["content-type"];
+        let content_type = server_response.headers["content-type"];
 
-        var must_inject =
-            (proxy_response.statusCode == 200 &&
+        let must_inject =
+            (server_response.statusCode == 200 &&
              (!content_type ||
               content_type == "text/html" ||
               content_type.startsWith("text/html;")));
 
         console.log(content_type, must_inject);
 
-        resp_encoding = proxy_response.headers["content-encoding"];
+        resp_encoding = server_response.headers["content-encoding"];
         console.log("resp recv from server: content encoding: ",
                     resp_encoding);
         console.log("resp recv from server: transfer encoding: ",
-                    proxy_response.headers["transfer-encoding"]);
+                    server_response.headers["transfer-encoding"]);
 
         if (must_inject){
             console.log("===> inject");
-            proxy_response.headers["transfer-encoding"] = 'chunked';
+            server_response.headers["transfer-encoding"] = 'chunked';
             // delete proxy_response.headers["transfer-encoding"];
-            delete proxy_response.headers["content-encoding"];
+            delete server_response.headers["content-encoding"];
 
             // delete proxy_response.headers["content-length"];
             // proxy_response.headers["content-length"] = page.length;
         }
 
-        proxy_response.headers["Content-Security-Policy"] = `script-src  'unsafe-inline'`;
-        console.log(proxy_response.headers);
-        response.writeHead(proxy_response.statusCode,
-                           proxy_response.headers);
+        // server_response.headers["Content-Security-Policy"] = `script-src  'unsafe-inline'`;
+        console.log(server_response.headers);
+        client_response.writeHead(server_response.statusCode,
+                                  server_response.headers);
 
     };
 
-    var proxy_request = http.request(options, responseListener);
+    let proxy_request = http.request(options, onServerResponse);
 
     /**
      * handle request content (if any)
      */
-    request.addListener('data', function(chunk) {
+    client_request.addListener('data', function(chunk) {
         console.log("got client data");
         proxy_request.write(chunk, 'binary');
     });
 
-    request.addListener('end', function() {
+    client_request.addListener('end', function() {
         console.log("got client end");
         proxy_request.end();
     });
 }
 
-var port=8080;
-console.log("proxy started on port", port);
-httpServer = http.createServer(onServerReceiveRequest);
 
-
-
-httpServer.on('connect', function(req, socket, head) {
+/*
+ * https tunneling using 'connect' method
+ */
+function onProxyReceiveConnect(req, socket, head) {
     // console.log("got connect");
 
-    var addr = req.url.split(':');
+    let addr = req.url.split(':');
     //creating TCP connection to remote server
-    var conn = net.connect(addr[1] || 443, addr[0], function() {
+    let conn = net.connect(addr[1] || 443, addr[0], function() {
         // tell the client that the connection is established
         socket.write('HTTP/' + req.httpVersion + ' 200 OK\r\n\r\n', 'UTF-8', function() {
             // creating pipes in both ends
@@ -228,10 +181,19 @@ httpServer.on('connect', function(req, socket, head) {
         });
     });
 
-    conn.on('error', function(e) {
+    conn.addListener('error', function(e) {
         console.log("Server connection error: " + e);
         socket.end();
     });
-});
+}
 
-httpServer.listen(port);
+
+function main(){
+    let port=8080;
+    console.log("proxy started on port", port);
+    let httpServer = http.createServer(onProxyReceiveRequest);
+    httpServer.addListener('connect', onProxyReceiveConnect);
+    httpServer.listen(port);
+}
+
+main();
