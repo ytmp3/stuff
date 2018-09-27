@@ -107,7 +107,7 @@ function onProxyReceiveRequest(client_request, client_response){
         });
 
         server_response.addListener('end', ()=>{
-            console.log("got server end");
+            console.log("server response: got server end");
             if (must_inject){
                 let inline_js = fs.readFileSync("injected_page.js","utf8");;
                 let post_data = build_template_post({inline_js});
@@ -156,6 +156,9 @@ function onProxyReceiveRequest(client_request, client_response){
     };
 
     let proxy_request = http.request(options, onServerResponse);
+    proxy_request.addListener('error', (e) => {
+        console.log("got proxy_request error", e);
+    });
 
     /**
      * handle request content (if any)
@@ -190,9 +193,17 @@ function onProxyReceiveConnect(req, socket, head) {
     });
 
     conn.addListener('error', function(e) {
-        console.log("Server connection error: " + e);
+        console.log("onProxyReceiveConnect: conn error " + e);
         socket.end();
     });
+
+
+    socket.addListener("error", (err) =>{
+        console.log("onProxyReceiveConnect: socket error");
+        conn.end();
+    });
+
+
 }
 
 
