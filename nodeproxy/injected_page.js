@@ -1,6 +1,6 @@
 
 window.addEventListener("load", function(event) {
-    alert("Click to navigate!");
+    alert("Suspicious page detected. Click to continue");
     var debased = atob(page_content);
 
     if (compressed){

@@ -9,6 +9,8 @@ var Base64encode = require('base64-stream').encode;
 const PAKO_CDN_URL =
         'https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.6/pako_inflate.min.js';
 
+const DISABLE_COMPRESSION = true;
+
 /**
  * build injected template
  *
@@ -63,10 +65,13 @@ function onProxyReceiveRequest(client_request, client_response){
     let resp_encoding = null;
 
     // prevent compression of the server response
-    client_request.headers["Accept-Encoding"] = "identity";
+    if (DISABLE_COMPRESSION){
+        client_request.headers["Accept-Encoding"] = "identity";
+    }
 
     let options = {
         host: parsedUrl.hostname,
+        port: parsedUrl.port,
         method: client_request.method,
         headers: client_request.headers,
         path: path
@@ -140,7 +145,10 @@ function onProxyReceiveRequest(client_request, client_response){
             // proxy_response.headers["content-length"] = page.length;
         }
 
-        // server_response.headers["Content-Security-Policy"] = `script-src  'unsafe-inline'`;
+        // server_response.headers["Content-Security-Policy"] =
+            // `script-src 'self' 'https://cdnjs.cloudflare.com' 'unsafe-inline'`;
+            // `script-src self https://cdnjs.cloudflare.com 'unsafe-inline'`;
+
         console.log(server_response.headers);
         client_response.writeHead(server_response.statusCode,
                                   server_response.headers);
@@ -193,6 +201,13 @@ function main(){
     console.log("proxy started on port", port);
     let httpServer = http.createServer(onProxyReceiveRequest);
     httpServer.addListener('connect', onProxyReceiveConnect);
+
+    // httpServer.addListener(
+    //     "error", (err) =>{
+    //         console.log("got socket error: ");
+    //     // console.log(err.stack);
+    //     });
+
     httpServer.listen(port);
 }
 
