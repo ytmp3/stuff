@@ -77,9 +77,13 @@ proxy.onRequest(function(ctx, callback)
 
   ctx.proxyToServerRequestOptions.headers['accept-encoding'] = 'identity';
 
+  console.log(ctx.proxyToServerRequestOptions.headers);
+  console.log("==================================================");
+
   ctx.onResponse(function(ctx, callback)
   {
     delete ctx.serverToProxyResponse.headers['content-security-policy'];
+    delete ctx.serverToProxyResponse.headers['expect-ct'];
 
     if (ctx.serverToProxyResponse.headers['content-type'] &&
         ctx.serverToProxyResponse.headers['content-type'].startsWith('text/html'))
@@ -90,7 +94,7 @@ proxy.onRequest(function(ctx, callback)
     {
        doInjection = false;
     }
-    callback();
+    return callback();
   });
 
   ctx.onResponseData(function(ctx, chunk, callback)
@@ -126,6 +130,8 @@ proxy.onRequest(function(ctx, callback)
 
   ctx.onResponseEnd(function(ctx, callback)
   {
+    console.log(ctx.serverToProxyResponse.headers);
+
     if (ctx.serverToProxyResponse.headers['transfer-encoding'] != 'chunked')
     {
       console.log(ctx.serverToProxyResponse);
