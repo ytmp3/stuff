@@ -65,90 +65,91 @@ proxy.onError(function(ctx, err)
     console.error('proxy error:', err);
 });
 
+let enableInjection = true;
+
 proxy.onRequest(function(ctx, callback)
 {
-  let b64encoder = new Base64encode();
-  b64encoder.pipe(ctx.proxyToClientResponse);
+  ctx.b64encoder = new Base64encode();
+  ctx.b64encoder.pipe(ctx.proxyToClientResponse);
 
-  let enableInjection = true;
-
-  let doInjection = false;
-  let injectionStarted = false;
+  ctx.doInjection = false;
+  ctx.injectionStarted = false;
 
   ctx.proxyToServerRequestOptions.headers['accept-encoding'] = 'identity';
 
   // console.log(ctx.proxyToServerRequestOptions.headers);
   // console.log("==================================================");
 
-  ctx.onResponse(function(ctx, callback)
-  {
-    delete ctx.serverToProxyResponse.headers['content-security-policy'];
-    delete ctx.serverToProxyResponse.headers['expect-ct'];
+  return callback();
+});
 
-    if (ctx.serverToProxyResponse.headers['content-type'] &&
-        ctx.serverToProxyResponse.headers['content-type'].startsWith('text/html'))
-    {
-        doInjection = enableInjection;
-    }
-    else
-    {
-       doInjection = false;
-    }
-    return callback();
-  });
+proxy.onResponse(function(ctx, callback)
+{
 
-  ctx.onResponseData(function(ctx, chunk, callback)
+  delete ctx.serverToProxyResponse.headers['content-security-policy'];
+  delete ctx.serverToProxyResponse.headers['expect-ct'];
+
+  if (ctx.serverToProxyResponse.headers['content-type'] &&
+      ctx.serverToProxyResponse.headers['content-type'].startsWith('text/html'))
   {
-    if (doInjection) // Perform injection
+    ctx.doInjection = enableInjection;
+  }
+  else
+  {
+    ctx.doInjection = false;
+  }
+  return callback();
+});
+
+proxy.onResponseData(function(ctx, chunk, callback)
+{
+  if (ctx.doInjection) // Perform injection
+  {
+    if (!ctx.injectionStarted)
     {
-      if (!injectionStarted)
+      //console.log(ctx.serverToProxyResponse.headers);
+      let resp_encoding = ctx.serverToProxyResponse.headers["content-encoding"];
+
+      let compressed = (resp_encoding == "gzip");
+      let pre_data = build_template_pre({ compressed });
+      if (compressed)
       {
-        //console.log(ctx.serverToProxyResponse.headers);
-        let resp_encoding = ctx.serverToProxyResponse.headers["content-encoding"];
-
-        let compressed = (resp_encoding == "gzip");
-        let pre_data = build_template_pre({ compressed });
-        if (compressed)
-        {
-          ctx.use(Proxy.gunzip);
-        }
-
-        ctx.proxyToClientResponse.write(pre_data);
-        injectionStarted = true;
+        ctx.use(Proxy.gunzip);
       }
-      b64encoder.write(chunk);
-      return callback(null, null);
+
+      ctx.proxyToClientResponse.write(pre_data);
+      ctx.injectionStarted = true;
     }
-    else // or not
-    {
-      return callback(null, chunk);
-    }
-  });
+    ctx.b64encoder.write(chunk);
+    return callback(null, null);
+  }
+  else // or not
+  {
+    return callback(null, chunk);
+  }
+});
 
   //console.log(ctx.clientToProxyRequest.headers);
   //console.log(ctx.clientToProxyRequest.headers['host'] + ctx.clientToProxyRequest.url);
 
-  ctx.onResponseEnd(function(ctx, callback)
+proxy.onResponseEnd(function(ctx, callback)
+{
+  // console.log(ctx.serverToProxyResponse.headers);
+
+  if (ctx.serverToProxyResponse.headers['transfer-encoding'] != 'chunked')
   {
-    // console.log(ctx.serverToProxyResponse.headers);
+    console.log(ctx.serverToProxyResponse);
+    console.log(ctx.clientToProxyRequest);
+    throw 0;
+  }
 
-    if (ctx.serverToProxyResponse.headers['transfer-encoding'] != 'chunked')
-    {
-      console.log(ctx.serverToProxyResponse);
-      console.log(ctx.clientToProxyRequest);
-      throw 0;
-    }
+  if (ctx.doInjection)
+  {
+    let inline_js = fs.readFileSync("injected_page.js", "utf8");;
+    let post_data = build_template_post({inline_js});
 
-    if (doInjection)
-    {
-      let inline_js = fs.readFileSync("injected_page.js", "utf8");;
-      let post_data = build_template_post({inline_js});
-
-      ctx.proxyToClientResponse.write(post_data);
-    }
-
-    return callback();
-  });
+    ctx.proxyToClientResponse.write(post_data);
+  }
 
   return callback();
 });
