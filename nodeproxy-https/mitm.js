@@ -77,8 +77,8 @@ proxy.onRequest(function(ctx, callback)
 
   ctx.proxyToServerRequestOptions.headers['accept-encoding'] = 'identity';
 
-  console.log(ctx.proxyToServerRequestOptions.headers);
-  console.log("==================================================");
+  // console.log(ctx.proxyToServerRequestOptions.headers);
+  // console.log("==================================================");
 
   ctx.onResponse(function(ctx, callback)
   {
@@ -117,20 +117,20 @@ proxy.onRequest(function(ctx, callback)
         injectionStarted = true;
       }
       b64encoder.write(chunk);
-      callback(null, null);
+      return callback(null, null);
     }
     else // or not
     {
-      callback(null, chunk);
+      return callback(null, chunk);
     }
   });
 
   //console.log(ctx.clientToProxyRequest.headers);
-  //console.log(ctx.clientToProxyRequest.url);
+  //console.log(ctx.clientToProxyRequest.headers['host'] + ctx.clientToProxyRequest.url);
 
   ctx.onResponseEnd(function(ctx, callback)
   {
-    console.log(ctx.serverToProxyResponse.headers);
+    // console.log(ctx.serverToProxyResponse.headers);
 
     if (ctx.serverToProxyResponse.headers['transfer-encoding'] != 'chunked')
     {
