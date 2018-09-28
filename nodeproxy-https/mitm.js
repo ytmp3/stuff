@@ -79,7 +79,7 @@ proxy.onRequest(function(ctx, callback)
   ctx.onResponse(function(ctx, callback)
   {
     delete ctx.serverToProxyResponse.headers['content-security-policy'];
-    if (ctx.serverToProxyResponse.headers['content-type'] == 'text/html')
+    if (ctx.serverToProxyResponse.headers['content-type'].startsWith('text/html'))
     {
         enableInjection = true;
     }
