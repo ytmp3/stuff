@@ -23,7 +23,6 @@ function build_template_pre(args){
     let pre_data=`<!DOCTYPE html>
 <html>
    <head>
-     <meta charset="utf-8"/>
      <script src="${PAKO_CDN_URL}"></script>
      <script type="text/javascript">
       var compressed=${args.compressed};
