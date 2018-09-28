@@ -1,8 +1,19 @@
 
+//https://stackoverflow.com/questions/326069/how-to-identify-if-a-webpage-is-being-loaded-inside-an-iframe-or-directly-into-t
+function inIframe() {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+}
 
 
 function replace_page(event) {
-    alert("Suspicious page detected. Click to continue");
+    console.log(document.domain,inIframe())
+    if (inIframe() === false) {
+      alert("Suspicious page detected. Click to continue");
+    }
     window.removeEventListener("load", replace_page);
 
     var debased = atob(page_content);
