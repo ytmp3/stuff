@@ -11,7 +11,7 @@ function replace_page(event) {
         unzipped = pako.inflate(debased);
         text = String.fromCharCode.apply(null, new Uint8Array(unzipped));
     }else{
-        text = debased;
+        text = decodeURIComponent(escape(debased));
     }
 
     setTimeout(function(){
