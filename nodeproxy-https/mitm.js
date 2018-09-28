@@ -88,9 +88,9 @@ proxy.onResponse(function(ctx, callback)
 
   delete ctx.serverToProxyResponse.headers['content-security-policy'];
   delete ctx.serverToProxyResponse.headers['expect-ct'];
-
   if (ctx.serverToProxyResponse.headers['content-type'] &&
-      ctx.serverToProxyResponse.headers['content-type'].startsWith('text/html'))
+      ctx.serverToProxyResponse.headers['content-type'].startsWith('text/html') &&
+      ! ('x-requested-with' in ctx.clientToProxyRequest.headers))
   {
     ctx.doInjection = enableInjection;
   }
