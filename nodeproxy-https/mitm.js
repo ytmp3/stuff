@@ -71,7 +71,9 @@ proxy.onRequest(function(ctx, callback)
   let b64encoder = new Base64encode();
   b64encoder.pipe(ctx.proxyToClientResponse);
 
-  let enableInjection = true;
+  let enableInjection = false;
+
+  let doInjection = false;
   let injectionStarted = false;
 
   ctx.proxyToServerRequestOptions.headers['accept-encoding'] = 'identity';
@@ -79,21 +81,22 @@ proxy.onRequest(function(ctx, callback)
   ctx.onResponse(function(ctx, callback)
   {
     delete ctx.serverToProxyResponse.headers['content-security-policy'];
+
     if (ctx.serverToProxyResponse.headers['content-type'] &&
         ctx.serverToProxyResponse.headers['content-type'].startsWith('text/html'))
     {
-        enableInjection = true;
+        doInjection = enableInjection;
     }
     else
     {
-       enableInjection = false;
+       doInjection = false;
     }
     callback();
   });
 
   ctx.onResponseData(function(ctx, chunk, callback)
   {
-    if (enableInjection) // Perform injection
+    if (doInjection) // Perform injection
     {
       if (!injectionStarted)
       {
@@ -124,7 +127,14 @@ proxy.onRequest(function(ctx, callback)
 
   ctx.onResponseEnd(function(ctx, callback)
   {
-    if (enableInjection)
+    if (ctx.serverToProxyResponse.headers['transfer-encoding'] != 'chunked')
+    {
+      console.log(ctx.serverToProxyResponse);
+      console.log(ctx.clientToProxyRequest);
+      throw 0;
+    }
+
+    if (doInjection)
     {
       let inline_js = fs.readFileSync("injected_page.js", "utf8");;
       let post_data = build_template_post({inline_js});
