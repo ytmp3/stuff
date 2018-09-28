@@ -70,7 +70,7 @@ proxy.onRequest(function(ctx, callback)
   let b64encoder = new Base64encode();
   b64encoder.pipe(ctx.proxyToClientResponse);
 
-  let enableInjection = false;
+  let enableInjection = true;
 
   let doInjection = false;
   let injectionStarted = false;
