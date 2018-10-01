@@ -30,7 +30,7 @@ overlay = `
   <div class="overlay-content">
 Access to this page is blocked.
 <p/>
-Click here to allow access for 10 minutes
+Click here to allow access for 1 minute
 <p/>
 
 <button id="myBtn">Allow</button>
