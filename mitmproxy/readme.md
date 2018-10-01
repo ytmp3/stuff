@@ -11,7 +11,7 @@ or dev env:
 
 ### start proxy
 
-    mitmdump -s ./mitm_inject.py
+    mitmdump -s ./mitm_inject.py -q
 
 ### install ca in your browser
 

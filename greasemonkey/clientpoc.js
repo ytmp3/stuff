@@ -4,7 +4,7 @@ overlay = `
     height: 100%;
     width: 0;
     position: fixed;
-    z-index: 10000000;
+    z-index: 100000000;
     left: 0;
     top: 0;
     background-color: rgb(0,0,0);
@@ -42,6 +42,36 @@ Click here to allow access for 1 minute
 var TIME_ALLOWED_SEC = 60;
 
 
+function pause_or_play_all_videos(pause){
+    return;
+
+
+    for (v of document.getElementsByTagName('video')){
+        if (pause){
+            v.pause();
+        }else{
+            v.play();
+        }
+    }
+    for (v of document.getElementsByTagName('audio')){
+        if (pause){
+            v.pause();
+        }else{
+            v.play();
+        }
+    }
+}
+
+
+//https://stackoverflow.com/questions/326069/how-to-identify-if-a-webpage-is-being-loaded-inside-an-iframe-or-directly-into-t
+function in_iframe() {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+}
+
 
 function on_overlay_timer_expired(){
     console.log("timer expired");
@@ -76,6 +106,9 @@ function insert_overlay(){
     myBtn.addEventListener("click", on_overlay_button_clicked);
 }
 
+
+var pause_video_timer = null;
+
 function show_overlay(){
     var myNav = document.getElementById("myNav");
     if (!myNav){
@@ -83,11 +116,17 @@ function show_overlay(){
         myNav = document.getElementById("myNav");
     }
     myNav.style.width = "100%";
+    pause_video_timer =  setInterval(()=>{
+        pause_or_play_all_videos(true);
+    }, 500);
 }
 
 function hide_overlay(){
     var myNav = document.getElementById("myNav");
     myNav.style.width = "0%";
+    clearInterval(pause_video_timer);
+    pause_or_play_all_videos(false);
+
 }
 
 function is_overlay_needed(){
@@ -106,6 +145,7 @@ function is_overlay_needed(){
 }
 
 function __main(){
+
     if (is_overlay_needed()){
         show_overlay();
     }else{
@@ -114,4 +154,6 @@ function __main(){
 }
 
 
-setTimeout(__main, 500);
+if (! in_iframe()){
+    setTimeout(__main, 500);
+}
