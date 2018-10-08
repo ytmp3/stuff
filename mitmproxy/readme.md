@@ -3,9 +3,11 @@
 
     pip3 install mitmproxy
 
-or dev env:
+or in dev env:
 
+    git clone https://github.com/mitmproxy/mitmproxy
     apt-get install python3-venv
+    cd mitmproxy
     ./dev.sh
     . venv/bin/activate
 
