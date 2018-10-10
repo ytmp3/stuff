@@ -1,17 +1,30 @@
+"use strict";
 
-var Proxy = require('http-mitm-proxy');
+const replaceStream = require('replacestream');
+const Proxy = require('http-mitm-proxy');
 
-var fs = require('fs');
-var net = require('net');
-var url = require('url');
-var http = require('http');
-var process = require('process');
+const fs = require('fs');
+const net = require('net');
+const url = require('url');
+const http = require('http');
+const process = require('process');
 
 
 const ENABLE_INJECTION = true;
+const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
-var proxy = Proxy();
 
+const proxy = Proxy();
+
+
+
+/*
+note:
+ - clientToProxyRequest: IncomingMessage
+ - proxyToClientResponse: ServerResponse
+ - proxyToServerRequest: ClientRequest
+ - serverToProxyResponse: IncomingMessage
+*/
 
 
 function override(object, methodName, callback)
@@ -45,11 +58,22 @@ function onError(ctx, err, errorKind)
  */
 function onRequest(ctx, callback)
 {
-    ctx.doInjection = false;
-    ctx.injectionStarted = false;
+    const host = ctx.clientToProxyRequest.headers["host"];
+    if (host && host.startsWith("www.forcepoint.com")){
+        if (ctx.clientToProxyRequest.url == "/blockpage_poc/clientpoc.js"){
+            ctx.proxyToClientResponse.writeHead(200, {
+                'Content-Type': 'application/javascript'});
+            const content = fs.readFileSync("clientpoc.js");
+            ctx.proxyToClientResponse.end(content);
+            return null;
+        }
+    }
 
-    // !!!! we prevent response from being compressed
-    ctx.proxyToServerRequestOptions.headers['accept-encoding'] = 'identity';
+    if (ENABLE_COMPRESSION){
+        ctx.use(Proxy.gunzip);
+    }else{
+        ctx.proxyToServerRequestOptions.headers['accept-encoding'] = 'identity';
+    }
     return callback();
 }
 
@@ -63,7 +87,7 @@ function onResponse(ctx, callback)
     const resp_headers = ctx.serverToProxyResponse.headers;
     const req_headers = ctx.clientToProxyRequest.headers;
 
-    // !!!! here we remove the csp header
+    // !!!! todo: for now we remove the csp header
     delete resp_headers['content-security-policy'];
 
     /* The Expect-CT header allows sites to opt in to reporting
@@ -77,60 +101,13 @@ function onResponse(ctx, callback)
         resp_headers['content-type'].startsWith('text/html') &&
         ! ('x-requested-with' in req_headers))
     {
-        ctx.doInjection = ENABLE_INJECTION;
+        const repl = replaceStream('<head>', '<head>\n<script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>');
+        ctx.addResponseFilter(repl);
+
+        console.log(resp_headers['content-length']);
+        // console.log(resp_headers);
+        delete resp_headers['content-length'];
     }
-    else
-    {
-        ctx.doInjection = false;
-    }
-    return callback();
-}
-
-
-/**
- * handle response data from server
- *
- * @param chunk is object Uint8Array
- */
-function onResponseData(ctx, chunk, callback)
-{
-    if (!ctx.doInjection)
-    {
-        return callback(null, chunk);
-    }
-
-    if (ctx.injectionStarted)
-    {
-        return callback(null, chunk);
-    }
-
-    const resp_headers = ctx.serverToProxyResponse.headers;
-    const resp_encoding = resp_headers["content-encoding"];
-    const compressed = (resp_encoding && resp_encoding.toLowerCase() == "gzip");
-
-    if (compressed)
-    {
-        ctx.use(Proxy.gunzip);
-    }
-
-    ctx.proxyToClientResponse.write(chunk);
-    ctx.injectionStarted = true;
-
-    return callback(null, null);
-}
-
-
-function onResponseEnd(ctx, callback)
-{
-    if (ctx.serverToProxyResponse.headers['transfer-encoding'] != 'chunked')
-    {
-        console.log(ctx.serverToProxyResponse);
-        console.log(ctx.clientToProxyRequest);
-        //??????
-        console.log("******* throw 0");
-        throw 0;
-    }
-
     return callback();
 }
 
@@ -138,11 +115,7 @@ function onResponseEnd(ctx, callback)
 
 proxy.onError(onError);
 proxy.onRequest(onRequest);
-// proxy.onRequestData();
-// proxy.onRequestEnd()
 proxy.onResponse(onResponse);
-proxy.onResponseData(onResponseData);
-proxy.onResponseEnd(onResponseEnd);
 
 proxy.listen({
     port: PROXY_PORT,
