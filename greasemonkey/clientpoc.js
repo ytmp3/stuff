@@ -43,8 +43,6 @@ var TIME_ALLOWED_SEC = 60;
 
 
 function pause_or_play_all_videos(pause){
-    return;
-
 
     for (v of document.getElementsByTagName('video')){
         if (pause){
@@ -107,7 +105,29 @@ function insert_overlay(){
 }
 
 
-var pause_video_timer = null;
+function start_pause_video_timer()
+{
+    if (localStorage.pause_video_timer){
+        console.log("already have pause_video_timer: ",
+                    localStorage.pause_video_timer);
+        return;
+    }
+
+    localStorage.pause_video_timer =  setInterval(()=>{
+        pause_or_play_all_videos(true);
+    }, 500);
+    console.log("starting pause_video_timer: ", localStorage.pause_video_timer);
+
+}
+
+function stop_pause_video_timer()
+{
+    if (localStorage.pause_video_timer){
+        console.log("stopping pause_video_timer: ", localStorage.pause_video_timer);
+        clearInterval(localStorage.pause_video_timer);
+        delete localStorage.pause_video_timer;
+    }
+}
 
 function show_overlay(){
     var myNav = document.getElementById("myNav");
@@ -116,15 +136,13 @@ function show_overlay(){
         myNav = document.getElementById("myNav");
     }
     myNav.style.width = "100%";
-    pause_video_timer =  setInterval(()=>{
-        pause_or_play_all_videos(true);
-    }, 500);
+    start_pause_video_timer();
 }
 
 function hide_overlay(){
     var myNav = document.getElementById("myNav");
     myNav.style.width = "0%";
-    clearInterval(pause_video_timer);
+    stop_pause_video_timer();
     pause_or_play_all_videos(false);
 
 }
@@ -145,6 +163,7 @@ function is_overlay_needed(){
 }
 
 function __main(){
+    stop_pause_video_timer();
 
     if (is_overlay_needed()){
         show_overlay();
@@ -156,4 +175,6 @@ function __main(){
 
 if (! in_iframe()){
     setTimeout(__main, 500);
+}else{
+    console.log("in iframe...ignoring");
 }

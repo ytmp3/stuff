@@ -101,7 +101,7 @@ function onResponse(ctx, callback)
         resp_headers['content-type'].startsWith('text/html') &&
         ! ('x-requested-with' in req_headers))
     {
-        const repl = replaceStream('<head>', '<head>\n<script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>');
+        const repl = replaceStream('</head>', '<script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>\n</head>');
         ctx.addResponseFilter(repl);
 
         console.log(resp_headers['content-length']);
