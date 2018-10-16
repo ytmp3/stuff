@@ -61,8 +61,48 @@ function pause_or_play_all_videos(pause){
 }
 
 
+
+function init_pause_video_timer(){
+    localStorage.pause_video_timer = JSON.stringify([]);
+}
+
+function start_pause_video_timer()
+{
+    // if (localStorage.pause_video_timer){
+    //     console.log("already have pause_video_timer: ",
+    //                 localStorage.pause_video_timer);
+    //     return;
+    // }
+
+    if (!localStorage.pause_video_timer){
+        init_pause_video_timer();
+    }
+    let timers = JSON.parse(localStorage.pause_video_timer);
+
+    let timer = setInterval(()=>{
+        pause_or_play_all_videos(true);
+    }, 500);
+    timers.push(timer);
+    localStorage.pause_video_timer = JSON.stringify(timers);
+    console.log("starting pause_video_timer: ", timer);
+
+}
+
+function stop_pause_video_timer()
+{
+    if (localStorage.pause_video_timer){
+        let timers = JSON.parse(localStorage.pause_video_timer);
+        for (t of timers){
+            console.log("stopping pause_video_timer: ", t);
+            clearInterval(t);
+        }
+        delete localStorage.pause_video_timer;
+    }
+}
+
+
 //https://stackoverflow.com/questions/326069/how-to-identify-if-a-webpage-is-being-loaded-inside-an-iframe-or-directly-into-t
-function in_iframe() {
+function running_in_iframe() {
   try {
     return window.self !== window.top;
   } catch (e) {
@@ -72,9 +112,11 @@ function in_iframe() {
 
 
 function on_overlay_timer_expired(){
-    console.log("timer expired");
+    console.log("overlay timer expired");
     show_overlay();
 }
+
+
 
 function start_overlay_timer(restart=false){
     if (!localStorage._overlay_last_ || restart){
@@ -84,7 +126,7 @@ function start_overlay_timer(restart=false){
     remainingMsec = TIME_ALLOWED_SEC * 1000 -
         (Date.now() - localStorage._overlay_last_);
 
-    console.log("timer started: ", remainingMsec);
+    console.log("overlay timer started: ", remainingMsec);
     setTimeout(on_overlay_timer_expired, remainingMsec);
 }
 
@@ -104,30 +146,6 @@ function insert_overlay(){
     myBtn.addEventListener("click", on_overlay_button_clicked);
 }
 
-
-function start_pause_video_timer()
-{
-    if (localStorage.pause_video_timer){
-        console.log("already have pause_video_timer: ",
-                    localStorage.pause_video_timer);
-        return;
-    }
-
-    localStorage.pause_video_timer =  setInterval(()=>{
-        pause_or_play_all_videos(true);
-    }, 500);
-    console.log("starting pause_video_timer: ", localStorage.pause_video_timer);
-
-}
-
-function stop_pause_video_timer()
-{
-    if (localStorage.pause_video_timer){
-        console.log("stopping pause_video_timer: ", localStorage.pause_video_timer);
-        clearInterval(localStorage.pause_video_timer);
-        delete localStorage.pause_video_timer;
-    }
-}
 
 function show_overlay(){
     var myNav = document.getElementById("myNav");
@@ -150,12 +168,14 @@ function hide_overlay(){
 function is_overlay_needed(){
     // never displayed => needed
     if (!localStorage._overlay_last_){
+        console.log("overlay needed (never displayed)");
         return true;
     }
 
     // allotted time passed => needed
     elapsedMsec = Date.now() - localStorage._overlay_last_;
     if (elapsedMsec > TIME_ALLOWED_SEC * 1000){
+        console.log("overlay needed (time elapsed)");
         return true;
     }
 
@@ -163,7 +183,7 @@ function is_overlay_needed(){
 }
 
 function __main(){
-    stop_pause_video_timer();
+    init_pause_video_timer();
 
     if (is_overlay_needed()){
         show_overlay();
@@ -173,8 +193,9 @@ function __main(){
 }
 
 
-if (! in_iframe()){
+if (! running_in_iframe()){
     setTimeout(__main, 500);
 }else{
     console.log("in iframe...ignoring");
+    // start_pause_video_timer();
 }
