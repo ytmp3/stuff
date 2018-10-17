@@ -1,1 +1,4 @@
 node_modules
+.http-mitm-proxy
+*keep*
+*.pem

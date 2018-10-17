@@ -4,7 +4,7 @@ overlay = `
     height: 100%;
     width: 0;
     position: fixed;
-    z-index: 100000000;
+    z-index: 1000000000;
     left: 0;
     top: 0;
     background-color: rgb(0,0,0);
@@ -42,61 +42,61 @@ Click here to allow access for 1 minute
 var TIME_ALLOWED_SEC = 60;
 
 
-function pause_or_play_all_videos(pause){
-
-    for (v of document.getElementsByTagName('video')){
-        if (pause){
-            v.pause();
-        }else{
-            v.play();
-        }
+function pause_media(type){
+    for (let v of document.getElementsByTagName(type)){
+        v.pause();
     }
-    for (v of document.getElementsByTagName('audio')){
-        if (pause){
-            v.pause();
-        }else{
-            v.play();
-        }
+}
+
+function pause_iframes(){
+    console.log("pause_iframes");
+    for (let iframe of document.getElementsByTagName('iframe')){
+		var iframeSrc = iframe.src;
+		iframe.src = iframeSrc;
+	}
+}
+
+function play_media(type){
+    for (let v of document.getElementsByTagName(type)){
+        v.play();
     }
 }
 
 
 
 function init_pause_video_timer(){
-    localStorage._pause_video_timer_ = JSON.stringify([]);
+    localStorage._pause_video_timer_ = -1;
+    pause_iframes();
 }
 
 function start_pause_video_timer()
 {
-    // if (localStorage._pause_video_timer_){
-    //     console.log("already have pause_video_timer: ",
-    //                 localStorage._pause_video_timer_);
-    //     return;
-    // }
-
     if (!localStorage._pause_video_timer_){
         init_pause_video_timer();
     }
-    let timers = JSON.parse(localStorage._pause_video_timer_);
+
+    if (localStorage._pause_video_timer_ != -1){
+        console.log("already have a timer");
+        stop_pause_video_timer();
+    }
 
     let timer = setInterval(()=>{
-        pause_or_play_all_videos(true);
+        pause_media('audio');
+        pause_media('video');
     }, 500);
-    timers.push(timer);
-    localStorage._pause_video_timer_ = JSON.stringify(timers);
+    localStorage._pause_video_timer_ = timer;
     console.log("starting pause_video_timer: ", timer);
 
 }
 
 function stop_pause_video_timer()
 {
-    if (localStorage._pause_video_timer_){
-        let timers = JSON.parse(localStorage._pause_video_timer_);
-        for (t of timers){
-            console.log("stopping pause_video_timer: ", t);
-            clearInterval(t);
-        }
-        delete localStorage._pause_video_timer_;
+    if (localStorage._pause_video_timer_ &&
+        localStorage._pause_video_timer_ != -1){
+        let timer = localStorage._pause_video_timer_;
+        console.log("stopping pause_video_timer: ", timer);
+        clearInterval(timer);
+        localStorage._pause_video_timer_ = -1;
     }
 }
 
@@ -161,8 +161,8 @@ function hide_overlay(){
     var myNav = document.getElementById("myNav");
     myNav.style.width = "0%";
     stop_pause_video_timer();
-    pause_or_play_all_videos(false);
-
+    play_media("video");
+    play_media("audio");
 }
 
 function is_overlay_needed(){
@@ -193,8 +193,18 @@ function __main(){
 }
 
 
-if (! running_in_iframe()){
-    setTimeout(__main, 500);
+if (window._js_injected_){
+    console.log("already injected");
 }else{
-    console.log("in iframe...ignoring");
+    window._js_injected_ = true;
+    console.log("loading injectionjs", window);
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (running_in_iframe()){
+            console.log("in iframe...ignoring");
+            return;
+        }
+
+        __main();
+    }, false);
 }
