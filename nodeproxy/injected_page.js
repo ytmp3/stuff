@@ -1,6 +1,6 @@
 
 //https://stackoverflow.com/questions/326069/how-to-identify-if-a-webpage-is-being-loaded-inside-an-iframe-or-directly-into-t
-function inIframe() {
+function __in_iframe() {
   try {
     return window.self !== window.top;
   } catch (e) {
@@ -8,14 +8,8 @@ function inIframe() {
   }
 }
 
-
-function replace_page(event) {
-    console.log(document.domain,inIframe())
-    if (inIframe() === false) {
-      alert("Suspicious page detected. Click to continue");
-    }
-    window.removeEventListener("load", replace_page);
-
+function __replace_page(event) {
+    var text="";
     var debased = atob(page_content);
 
     if (compressed){
@@ -31,52 +25,20 @@ function replace_page(event) {
         document.close();
     }, 1);
 
-
-    // setTimeout(function(){
-    //     var dp = new DOMParser();
-    //     var doc = dp.parseFromString(text, "text/html");
-    //     document.replaceChild(
-    //         document.importNode(doc.documentElement, true),
-    //         document.documentElement);
-    // }, 1);
-
-
-
-
-    // var meta = document.createElement('meta');
-    // meta.httpEquiv = "Content-Security-Policy";
-    // meta.content = "script-src  'unsafe-inline'";
-    // doc.getElementsByTagName('head')[0].appendChild(meta);
-
-    // evt = document.createEvent('Event');
-    // evt.initEvent('load', false, false);
-    // window.dispatchEvent(evt);
-
-    // document.replaceChild(
-    //     document.importNode(doc.documentElement, true),
-    //     document.documentElement);
-
-    // setTimeout(function(){
-    //     console.log("after timeout");
-    //     var evt = document.createEvent('Event');
-    //     evt.initEvent('load', false, false);
-    //     window.dispatchEvent(evt);
-    // }, 1000);
-
-
-    /*document.addEventListener("DOMContentLoaded", function(){
-
-      var meta = document.createElement('meta');
-      meta.httpEquiv = "Content-Security-Policy";
-      meta.content = "script-src  'unsafe-inline'";
-      document.getElementsByTagName('head')[0].appendChild(meta);
-      });
-    */
-
-    // setTimeout(function(){alert("I am still here");}, 5000);
 }
 
 
-// window.addEventListener("load", replace_page);
+function __main(){
+    if (window.__page_replaced){
+        return;
+    }
+    window.__page_replaced = true;
 
-replace_page();
+    // if (!__in_iframe()) {
+    //     var myBtn = document.getElementById("myBtn");
+    //     myBtn.addEventListener("click", __replace_page);
+
+    // }
+}
+
+__main();
