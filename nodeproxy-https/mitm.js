@@ -156,7 +156,6 @@ function getProp(self, prop) {
  */
 function onResponse(ctx, callback)
 {
-
     const resp_headers = ctx.serverToProxyResponse.headers;
     const req_headers = ctx.clientToProxyRequest.headers;
 
@@ -193,35 +192,35 @@ function onResponse(ctx, callback)
  * handle response data from server
  *
  */
-function onResponseData(ctx, chunk, callback)
-{
-    return callback(null, chunk);
+// function onResponseData(ctx, chunk, callback)
+// {
+//     return callback(null, chunk);
 
-}
+// }
 
 /**
  * handle response end from server
  *
  */
-function onResponseEnd(ctx, callback)
-{
-    // console.log("in onResponseEnd", ctx.contextid);
+// function onResponseEnd(ctx, callback)
+// {
+//     // console.log("in onResponseEnd", ctx.contextid);
 
-    const resp_headers = ctx.serverToProxyResponse.headers;
-    if (resp_headers['transfer-encoding'] != 'chunked'){
-        console.log('onResponseEnd:!!!!!!!!!!!!!!!!');
-        throw 0;
-    }
+//     const resp_headers = ctx.serverToProxyResponse.headers;
+//     if (resp_headers['transfer-encoding'] != 'chunked'){
+//         console.log('onResponseEnd:!!!!!!!!!!!!!!!!');
+//         throw 0;
+//     }
 
-    return callback();
-}
+//     return callback();
+// }
 
 
 proxy.onError(onError);
 proxy.onRequest(onRequest);
 proxy.onResponse(onResponse);
-proxy.onResponseData(onResponseData);
-proxy.onResponseEnd(onResponseEnd);
+// proxy.onResponseData(onResponseData);
+// proxy.onResponseEnd(onResponseEnd);
 
 
 proxy.listen({

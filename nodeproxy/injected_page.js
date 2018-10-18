@@ -8,7 +8,7 @@ function __in_iframe() {
   }
 }
 
-function __replace_page(event) {
+function __replace_page() {
     var text="";
     var debased = atob(page_content);
 
@@ -16,14 +16,20 @@ function __replace_page(event) {
         unzipped = pako.inflate(debased);
         text = String.fromCharCode.apply(null, new Uint8Array(unzipped));
     }else{
-        text = decodeURIComponent(escape(debased));
+        try{
+            text = decodeURIComponent(escape(debased));
+        }catch(e){
+            console.log(e);
+            text = debased;
+        }
     }
 
     setTimeout(function(){
-        document.open();
-        document.write(text);
-        document.close();
-    }, 1);
+        alert('still here');
+    }, 10000);
+    document.open();
+    document.write(text);
+    document.close();
 
 }
 
@@ -33,6 +39,10 @@ function __main(){
         return;
     }
     window.__page_replaced = true;
+
+    if (__in_iframe()) {
+        __replace_page();
+    }
 
     // if (!__in_iframe()) {
     //     var myBtn = document.getElementById("myBtn");
