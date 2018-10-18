@@ -7,7 +7,7 @@ const http    = require('http');
 const process = require('process');
 const Proxy   = require('http-mitm-proxy');
 const Base64encode = require('base64-stream').encode;
-
+const { Transform } = require('stream');
 
 /* cdn to load the 'pako' compression library */
 const PAKO_CDN_URL = 'https://cdnjs.cloudflare.com'+
@@ -18,7 +18,7 @@ const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
 
 const proxy = Proxy();
-
+var context_count = 0;
 
 
 /*
@@ -28,7 +28,6 @@ note:
  - proxyToServerRequest: ClientRequest
  - serverToProxyResponse: IncomingMessage
 */
-
 
 function override(object, methodName, callback)
 {
@@ -48,10 +47,12 @@ override(proxy, '_onHttpServerConnect', function(original) {
 });
 
 
+
+
 /**
- * build injected template
+ * build injected template (begin)
  *
- * args = {inline_js: '', compressed: true}
+ * args = {compressed: true}
  */
 function build_template_pre(args){
     let pre_data=`<!DOCTYPE html>
@@ -65,6 +66,11 @@ function build_template_pre(args){
     return pre_data;
 }
 
+/**
+ * build injected template (end)
+ *
+ * args = {inline_js: '...'}
+ */
 function build_template_post(args){
     var post_data=`";
     ${args.inline_js}
@@ -74,6 +80,37 @@ function build_template_post(args){
 </html>`;
     return post_data;
 }
+
+
+class AddStubAndBase64 extends Base64encode {
+    constructor(options) {
+        super(options);
+        this.injectionStarted = false;
+    }
+
+    _transform(chunk, encoding, callback){
+        console.log("in _transform");
+
+        if (!this.injectionStarted){
+            let compressed = false;
+            const pre_data = build_template_pre({compressed});
+            this.push(pre_data);
+            this.injectionStarted = true;
+        }
+        super._transform(chunk, encoding, callback);
+    }
+
+    _flush(callback){
+        console.log("in _flush");
+        super._flush(()=>{
+            const inline_js = fs.readFileSync("injected_page.js", "utf8");;
+            const post_data = build_template_post({inline_js});
+            this.push(post_data);
+            callback();
+        });
+    }
+}
+
 
 function onError(ctx, err, errorKind)
 {
@@ -90,8 +127,7 @@ function onRequest(ctx, callback)
 {
     // true if javascript injection must be performed on this request
     // (current criteria is: content-type is text/html
-    ctx.doInjection = false;
-    ctx.injectionStarted = false;
+    ctx.contextid = ++context_count;
 
     if (!ENABLE_COMPRESSION){
         const svr_req_headers = ctx.proxyToServerRequestOptions.headers;
@@ -121,13 +157,18 @@ function onResponse(ctx, callback)
      */
     delete resp_headers['expect-ct'];
 
-    if (resp_headers['content-type'] &&
-        resp_headers['content-type'].startsWith('text/html') &&
-        ! ('x-requested-with' in req_headers))
-    {
-        ctx.doInjection = ENABLE_INJECTION;
+    const must_inject = (
+        ENABLE_INJECTION &&
+        resp_headers['content-type'] &&
+            resp_headers['content-type'].startsWith('text/html') &&
+            ! ('x-requested-with' in req_headers));
+
+    if (must_inject){
         delete resp_headers['content-length'];
+        const myfilt = new AddStubAndBase64();
+        ctx.addResponseFilter(myfilt);
     }
+
     return callback();
 }
 
@@ -138,29 +179,8 @@ function onResponse(ctx, callback)
  */
 function onResponseData(ctx, chunk, callback)
 {
-    if (!ctx.doInjection){
-        return callback(null, chunk);
-    }
+    return callback(null, chunk);
 
-    if (!ctx.injectionStarted){
-        const resp_headers = ctx.serverToProxyResponse.headers;
-        const resp_encoding = resp_headers["content-encoding"];
-        const compressed = (resp_encoding == "gzip");
-
-        if (compressed)
-        {
-            ctx.use(Proxy.gunzip);
-        }
-
-        const pre_data = build_template_pre({compressed});
-        ctx.proxyToClientResponse.write(pre_data);
-        ctx.injectionStarted = true;
-
-        ctx.b64encoder = new Base64encode();
-        ctx.b64encoder.pipe(ctx.proxyToClientResponse);
-    }
-    ctx.b64encoder.write(chunk);
-    return callback(null, null);
 }
 
 /**
@@ -169,17 +189,12 @@ function onResponseData(ctx, chunk, callback)
  */
 function onResponseEnd(ctx, callback)
 {
+    console.log("in onResponseEnd", ctx.contextid);
+
     const resp_headers = ctx.serverToProxyResponse.headers;
     if (resp_headers['transfer-encoding'] != 'chunked'){
         console.log('onResponseEnd:!!!!!!!!!!!!!!!!');
         throw 0;
-    }
-
-    if (ctx.doInjection)
-    {
-        const inline_js = fs.readFileSync("injected_page.js", "utf8");;
-        const post_data = build_template_post({inline_js});
-        ctx.proxyToClientResponse.write(post_data);
     }
 
     return callback();
