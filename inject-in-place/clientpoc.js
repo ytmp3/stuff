@@ -1,41 +1,29 @@
-overlay = `
-<style type="text/css">
-.overlay {
-    height: 100%;
-    width: 0;
-    position: fixed;
-    z-index: 1000000000;
-    left: 0;
-    top: 0;
-    background-color: rgb(0,0,0);
-    background-color: rgba(0,0,0, 0.9);
-    overflow-x: hidden;
-    transition: 0.2s;
-}
+var overlay = `
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.10/dialog-polyfill.js" integrity="sha256-MzKeKXV3W7bf3Uu0xLNN/SiVj3OBfBUzD3VmMb/yyCQ=" crossorigin="anonymous"></script>
 
-.overlay-content {
-    position: relative;
-    top: 25%;
-    width: 100%;
-    text-align: center;
-    margin-top: 30px;
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.10/dialog-polyfill.css" integrity="sha256-hT0ET4tfm+7MyjeBepBgV2N5tOmsAVKcTWhH82jvoaA=" crossorigin="anonymous" />
+    <style>
+      dialog {
+      border: 0;
+      padding: 20px;
+      }
 
-    font-size: 36px;
-    color: #818181;
-}
+      dialog + .backdrop {
+      background-color: rgba(0,255,0,0.5);
+      }
 
-</style>
+      dialog::backdrop { /* native */
+      background-color: rgba(0,255,0,0.5);
+      }
 
-<div id="myNav" class="overlay">
-  <div class="overlay-content">
-Access to this page is blocked.
-<p/>
-Click here to allow access for 1 minute
-<p/>
+    </style>
 
-<button id="myBtn">Allow</button>
-  </div>
-</div>
+    <dialog id="myNav" >
+      <div>
+        Navigation to this site is restricted by company policy.
+        <button id="myBtn">Submit</button>
+      </div>
+    </dialog>
 `;
 
 
@@ -142,6 +130,9 @@ function insert_overlay(){
     var frag = temp.content;
     document.body.appendChild(frag);
 
+    var dialog = document.querySelector('dialog');
+    dialogPolyfill.registerDialog(dialog);
+
     var myBtn = document.getElementById("myBtn");
     myBtn.addEventListener("click", on_overlay_button_clicked);
 }
@@ -153,13 +144,16 @@ function show_overlay(){
         insert_overlay();
         myNav = document.getElementById("myNav");
     }
-    myNav.style.width = "100%";
+    var dialog = document.querySelector('dialog');
+    dialog.showModal();
     start_pause_video_timer();
 }
 
 function hide_overlay(){
     var myNav = document.getElementById("myNav");
     myNav.style.width = "0%";
+    var dialog = document.querySelector('dialog');
+    dialog.close();
     stop_pause_video_timer();
     play_media("video");
     play_media("audio");

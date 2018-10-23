@@ -97,11 +97,27 @@ function onResponse(ctx, callback)
      */
     delete resp_headers['expect-ct'];
 
-    if (resp_headers['content-type'] &&
-        resp_headers['content-type'].startsWith('text/html') &&
-        ! ('x-requested-with' in req_headers))
+    // note: headers converted to lowercase by nodejs
+    const is_html = 'content-type' in resp_headers &&
+          resp_headers['content-type'].startsWith('text/html');
+    const is_xhr = ('x-requested-with' in req_headers);
+    const is_cors = ('origin' in req_headers);
+
+    const must_inject = (ENABLE_INJECTION && is_html && !is_xhr && !is_cors);
+
+
+    if (must_inject)
     {
-        const repl = replaceStream('</head>', '<script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>\n</head>');
+        const injected_data =
+              '<script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.10/dialog-polyfill.js" integrity="sha256-MzKeKXV3W7bf3Uu0xLNN/SiVj3OBfBUzD3VmMb/yyCQ=" crossorigin="anonymous"></script>\n' +
+
+              '<script src="https://www.forcepoint.com'+
+              '/blockpage_poc/clientpoc.js"></script>\n';
+
+
+
+        // const repl = replaceStream('</head>', injected_data + '\n</head>');
+        const repl = replaceStream(/(<head[^>]*>)/, '$1\n' + injected_data);
         ctx.addResponseFilter(repl);
 
         console.log(resp_headers['content-length']);
@@ -122,6 +138,9 @@ proxy.listen({
     silent:false
 });
 
-console.log("Proxy port: ", PROXY_PORT);
-const ca = fs.readFileSync(proxy.sslCaDir + '/certs/ca.pem', {encoding: "ascii"});
-console.log("Make sure your browser trusts this CA:", ca);
+
+const ca_path = proxy.sslCaDir + '/certs/ca.pem';
+// const ca = fs.readFileSync(ca_path, {encoding: "ascii"});
+console.log("Make sure your browser trusts this CA:");
+console.log(ca_path);
+console.log("Proxy running on port", PROXY_PORT);
