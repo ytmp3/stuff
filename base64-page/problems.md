@@ -20,3 +20,7 @@ https://www.npmjs.com/package/iconv-lite
 ### deprecation of document.write
 
 https://developers.google.com/web/updates/2016/08/removing-document-write
+
+### rtl.fr
+
+overlay not showing

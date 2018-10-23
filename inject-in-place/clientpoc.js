@@ -36,7 +36,7 @@ Click here to allow access for 1 minute
 <button id="myBtn">Allow</button>
   </div>
 </div>
-`
+`;
 
 
 var TIME_ALLOWED_SEC = 60;
