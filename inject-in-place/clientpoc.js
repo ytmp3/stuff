@@ -1,26 +1,38 @@
 var overlay = `
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.10/dialog-polyfill.js" integrity="sha256-MzKeKXV3W7bf3Uu0xLNN/SiVj3OBfBUzD3VmMb/yyCQ=" crossorigin="anonymous"></script>
+<style type="text/css">
+.overlay {
+    display: block;
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 2147483647;
+    left: 0;
+    top: 0;
+    background-color: rgba(4,121,17,0.99);
+    overflow-x: hidden;
+    transition: 0.2s;
+}
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.10/dialog-polyfill.css" integrity="sha256-hT0ET4tfm+7MyjeBepBgV2N5tOmsAVKcTWhH82jvoaA=" crossorigin="anonymous" />
-    <style>
-
-
-
-
-
-dialog#myNav > div {
+#myNav .overlay-content {
 	font-size: 20px;
     font-family: arial,sans-serif;
-    color: #444;
+    color: #eee;
 	vertical-align: baseline;
 	margin: 0;
 	padding: 0;
 	border: 0;
     box-sizing: border-box;
+
+
+    position: relative;
+    top: 25%;
+    width: 100%;
+    text-align: center;
+
+    font-size: 36px;
 }
 
-
-dialog#myNav button {
+#myNav button {
   position:relative;
   width: auto;
   display:inline-block;
@@ -42,7 +54,7 @@ dialog#myNav button {
   box-shadow: 0px 6px 0px #d35400;
 }
 
-dialog#myNav button:active{
+#myNav button:active{
     -webkit-box-shadow: 0px 2px 0px #d35400;
     -moz-box-shadow: 0px 2px 0px #d35400;
     box-shadow: 0px 2px 0px #d35400;
@@ -50,28 +62,24 @@ dialog#myNav button:active{
     top:4px;
 }
 
-dialog#myNav  {
-      border: 0;
-      padding: 20px;
-      }
 
-dialog#myNav  + .backdrop {
-      background-color: rgba(4,121,17,1);
-      }
 
-dialog::backdrop { /* native */
-      background-color: rgba(4,121,17,1);
-      }
+</style>
 
-    </style>
+<div id="myNav" class="overlay">
+  <div class="overlay-content">
+Access to this page is blocked.
+<p/>
+Click here to allow access for 1 minute
+<p/>
 
-    <dialog id="myNav" >
-      <div>
-        Navigation to this site is restricted by company policy.
-        <button id="myBtn">Submit</button>
-      </div>
-    </dialog>
+<button id="myBtn">Allow</button>
+  </div>
+</div>
+
 `;
+
+
 
 
 var TIME_ALLOWED_SEC = 60;
@@ -191,10 +199,7 @@ function insert_overlay(){
     var temp = document.createElement('template');
     temp.innerHTML = overlay;
     var frag = temp.content;
-    document.body.appendChild(frag);
-
-    var dialog = document.querySelector('dialog');
-    dialogPolyfill.registerDialog(dialog);
+    document.body.insertBefore(frag, document.body.firstChild);
 
     var myBtn = document.getElementById("myBtn");
     myBtn.addEventListener("click", on_overlay_button_clicked);
@@ -207,10 +212,15 @@ function show_overlay(){
         insert_overlay();
         myNav = document.getElementById("myNav");
     }
-    var dialog = document.querySelector('dialog');
-    dialog.showModal();
+    myNav.style.width = "100%";
     start_pause_video_timer();
 }
+
+// function show_overlay(){
+//     setTimeout(()=>{
+//         console.log("show_overlay...");
+//         show_overlay_1();}, 5000);
+// }
 
 function hide_overlay(){
     var myNav = document.getElementById("myNav");

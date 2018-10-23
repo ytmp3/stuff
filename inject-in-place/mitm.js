@@ -108,10 +108,7 @@ function onResponse(ctx, callback)
 
     if (must_inject)
     {
-        const injected_data =
-              '<script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.10/dialog-polyfill.js" integrity="sha256-MzKeKXV3W7bf3Uu0xLNN/SiVj3OBfBUzD3VmMb/yyCQ=" crossorigin="anonymous"></script>\n' +
-
-              '<script src="https://www.forcepoint.com'+
+        const injected_data = '<script src="https://www.forcepoint.com'+
               '/blockpage_poc/clientpoc.js"></script>\n';
 
 

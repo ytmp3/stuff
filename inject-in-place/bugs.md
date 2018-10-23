@@ -9,6 +9,11 @@ https://www.lepoint.fr/video/
 
 ## chromium
 
+### violation settimeout handler
+
+100% cpu usage
+
+https://www.presse-citron.net/video-une-tesla-volee-en-pleine-nuit-par-des-hackers-maladroits/
 
 ### video not stopped
 
@@ -27,6 +32,13 @@ https://www.boursorama.com/videos/
 
 ### overlay not on top
 
+https://www.ndtv.com/cities/on-video-karnataka-woman-beats-bank-officer-over-sex-for-loan-demand-1932867
+
+
+
+
+
+
 http://www.carrefour.fr/jeux-consoles
 
 https://www.telestar.fr/actu-tv/slt/video-l-incroyable-chute-de-franz-olivier-giesbert-dans-les-terriens-du-dimanche-384326
@@ -35,7 +47,7 @@ https://www.marmiton.org/pratique/techniques-culinaires-video-cuisine.aspx
 
 https://tvline.com/2018/10/02/single-parents-season-1-episode-2-angie-poppy-sleepovers-sex-video/
 
-https://www.ndtv.com/cities/on-video-karnataka-woman-beats-bank-officer-over-sex-for-loan-demand-1932867
+
 
 https://www.midilibre.fr/videos/
 
