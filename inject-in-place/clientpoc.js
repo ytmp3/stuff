@@ -9,11 +9,11 @@ var overlay = `
       }
 
       dialog + .backdrop {
-      background-color: rgba(0,255,0,0.5);
+      background-color: rgba(4,121,17,1);
       }
 
       dialog::backdrop { /* native */
-      background-color: rgba(0,255,0,0.5);
+      background-color: rgba(4,121,17,1);
       }
 
     </style>
@@ -51,19 +51,36 @@ function play_media(type){
 }
 
 
-
-function init_pause_video_timer(){
-    localStorage._pause_video_timer_ = -1;
-    pause_iframes();
+function _save_pause_video_timer(id){
+    console.log("save pause_video_timer: id=", id, ": old value=",
+                window._pause_video_timer_id);
+    window._pause_video_timer_id = id;
 }
+
+function _init_pause_video_timer(){
+    _save_pause_video_timer(-1);
+}
+
+function _read_pause_video_timer(){
+    if ('_save_pause_video_timer' in window){
+        console.log("read pause_video_timer: id=", window._pause_video_timer_id);
+        return window._pause_video_timer_id;
+    }else{
+        _init_pause_video_timer();
+    }
+}
+
+
 
 function start_pause_video_timer()
 {
     if (!localStorage._pause_video_timer_){
-        init_pause_video_timer();
+        _init_pause_video_timer();
+        pause_iframes();
     }
 
-    if (localStorage._pause_video_timer_ != -1){
+    let old_timer = _read_pause_video_timer();
+    if (old_timer != -1){
         console.log("already have a timer");
         stop_pause_video_timer();
     }
@@ -72,19 +89,18 @@ function start_pause_video_timer()
         pause_media('audio');
         pause_media('video');
     }, 500);
-    localStorage._pause_video_timer_ = timer;
-    console.log("starting pause_video_timer: ", timer);
+    console.log("starting pause_video_timer: id=", timer);
+    _save_pause_video_timer(timer);
 
 }
 
 function stop_pause_video_timer()
 {
-    if (localStorage._pause_video_timer_ &&
-        localStorage._pause_video_timer_ != -1){
-        let timer = localStorage._pause_video_timer_;
-        console.log("stopping pause_video_timer: ", timer);
+    let timer = _read_pause_video_timer();
+    if (timer != -1){
+        console.log("stopping pause_video_timer: id=", timer);
         clearInterval(timer);
-        localStorage._pause_video_timer_ = -1;
+        _save_pause_video_timer(-1);
     }
 }
 
@@ -177,7 +193,8 @@ function is_overlay_needed(){
 }
 
 function __main(){
-    init_pause_video_timer();
+    _init_pause_video_timer();
+    pause_iframes();
 
     if (is_overlay_needed()){
         show_overlay();
