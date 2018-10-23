@@ -3,16 +3,63 @@ var overlay = `
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.10/dialog-polyfill.css" integrity="sha256-hT0ET4tfm+7MyjeBepBgV2N5tOmsAVKcTWhH82jvoaA=" crossorigin="anonymous" />
     <style>
-      dialog {
+
+
+
+
+
+dialog#myNav > div {
+	font-size: 20px;
+    font-family: arial,sans-serif;
+    color: #444;
+	vertical-align: baseline;
+	margin: 0;
+	padding: 0;
+	border: 0;
+    box-sizing: border-box;
+}
+
+
+dialog#myNav button {
+  position:relative;
+  width: auto;
+  display:inline-block;
+  color:#ecf0f1;
+  text-decoration:none;
+  border-radius:5px;
+  border:solid 1px #f39c12;
+  background:#e67e22;
+  text-align:center;
+  padding:16px 18px 14px;
+  margin: 12px;
+
+  -webkit-transition: all 0.1s;
+	-moz-transition: all 0.1s;
+	transition: all 0.1s;
+
+  -webkit-box-shadow: 0px 6px 0px #d35400;
+  -moz-box-shadow: 0px 6px 0px #d35400;
+  box-shadow: 0px 6px 0px #d35400;
+}
+
+dialog#myNav button:active{
+    -webkit-box-shadow: 0px 2px 0px #d35400;
+    -moz-box-shadow: 0px 2px 0px #d35400;
+    box-shadow: 0px 2px 0px #d35400;
+    position:relative;
+    top:4px;
+}
+
+dialog#myNav  {
       border: 0;
       padding: 20px;
       }
 
-      dialog + .backdrop {
+dialog#myNav  + .backdrop {
       background-color: rgba(4,121,17,1);
       }
 
-      dialog::backdrop { /* native */
+dialog::backdrop { /* native */
       background-color: rgba(4,121,17,1);
       }
 
