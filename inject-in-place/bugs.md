@@ -15,6 +15,13 @@ https://www.lepoint.fr/video/
 
 https://www.presse-citron.net/video-une-tesla-volee-en-pleine-nuit-par-des-hackers-maladroits/
 
+problem description:
+
+the javascript below has a content-type text/html and a javascript variable containing a '<head>', so injection takes place, which messes the execution
+
+https://ads.pubmatic.com/AdServer/js/showad.js
+
+
 ### video not stopped
 
 https://www.lepoint.fr/video/
@@ -33,6 +40,7 @@ https://www.boursorama.com/videos/
 ### overlay not on top
 
 https://www.ndtv.com/cities/on-video-karnataka-woman-beats-bank-officer-over-sex-for-loan-demand-1932867
+
 
 
 

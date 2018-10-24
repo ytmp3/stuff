@@ -91,6 +91,12 @@ function pause_media(type){
     }
 }
 
+function play_media(type){
+    for (let v of document.getElementsByTagName(type)){
+        v.play();
+    }
+}
+
 function pause_iframes(){
     console.log("pause_iframes");
     for (let iframe of document.getElementsByTagName('iframe')){
@@ -98,13 +104,6 @@ function pause_iframes(){
 		iframe.src = iframeSrc;
 	}
 }
-
-function play_media(type){
-    for (let v of document.getElementsByTagName(type)){
-        v.play();
-    }
-}
-
 
 function _save_pause_video_timer(id){
     console.log("save pause_video_timer: id=", id, ": old value=",
@@ -226,10 +225,9 @@ function hide_overlay(){
     var myNav = document.getElementById("myNav");
     myNav.style.width = "0%";
     var dialog = document.querySelector('dialog');
-    dialog.close();
     stop_pause_video_timer();
-    play_media("video");
-    play_media("audio");
+    // play_media("video");
+    // play_media("audio");
 }
 
 function is_overlay_needed(){
