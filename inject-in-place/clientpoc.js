@@ -1,4 +1,6 @@
-var overlay = `
+(function(){
+
+    var overlay = `
 <style type="text/css">
 .overlay {
     display: block;
@@ -13,21 +15,29 @@ var overlay = `
     transition: 0.2s;
 }
 
-#myNav .overlay-content {
-	font-size: 20px;
+#myNav p {
+    text-align: center;
+	font-size: 1em;
     font-family: arial,sans-serif;
     color: #eee;
 	vertical-align: baseline;
-	margin: 0;
-	padding: 0;
-	border: 0;
+	margin: 10px;
+/*	padding: 0; */
+/*	border: 0; */
+    line-height: 2
     box-sizing: border-box;
 
+
+	padding: 0;
+	margin: 15px;
+
+}
+
+#myNav .overlay-content {
 
     position: relative;
     top: 25%;
     width: 100%;
-    text-align: center;
 
     font-size: 36px;
 }
@@ -36,6 +46,8 @@ var overlay = `
   position:relative;
   width: auto;
   display:inline-block;
+  font-size: 20px;
+  font-family: arial,sans-serif;
   color:#ecf0f1;
   text-decoration:none;
   border-radius:5px;
@@ -68,11 +80,11 @@ var overlay = `
 
 <div id="myNav" class="overlay">
   <div class="overlay-content">
+<p/>
 Access to this page is blocked.
 <p/>
 Click here to allow access for 1 minute
 <p/>
-
 <button id="myBtn">Allow</button>
   </div>
 </div>
@@ -83,13 +95,17 @@ Click here to allow access for 1 minute
 
 
 var TIME_ALLOWED_SEC = 60;
+var timer_storage = localStorage;
 
-
-function pause_media(type){
-    for (let v of document.getElementsByTagName(type)){
-        v.pause();
+    function pause_media(type){
+        var media = document.querySelectorAll(type);
+        if (media){
+            console.log("pause_media: found ", media.lenth);
+            for (let v of media){
+                v.pause();
+            }
+        }
     }
-}
 
 function play_media(type){
     for (let v of document.getElementsByTagName(type)){
@@ -99,28 +115,31 @@ function play_media(type){
 
 function pause_iframes(){
     console.log("pause_iframes");
-    for (let iframe of document.getElementsByTagName('iframe')){
-		var iframeSrc = iframe.src;
-		iframe.src = iframeSrc;
-	}
+    // for (let iframe of document.getElementsByTagName('iframe')){
+	// 	var iframeSrc = iframe.src;
+	// 	iframe.src = iframeSrc;
+	// }
 }
 
 function _save_pause_video_timer(id){
-    console.log("save pause_video_timer: id=", id, ": old value=",
-                window._pause_video_timer_id);
-    window._pause_video_timer_id = id;
+    console.log("   - save pause_video_timer: id=", id, ": old value=",
+                timer_storage._pause_video_timer_id);
+    timer_storage._pause_video_timer_id = id;
 }
 
 function _init_pause_video_timer(){
-    _save_pause_video_timer(-1);
+    console.log("   - init pause_video_timer: old value=",timer_storage._pause_video_timer_id);
+    if (!timer_storage._pause_video_timer_id){
+        timer_storage._pause_video_timer_id = -1;
+    }
 }
 
 function _read_pause_video_timer(){
-    if ('_save_pause_video_timer' in window){
-        console.log("read pause_video_timer: id=", window._pause_video_timer_id);
-        return window._pause_video_timer_id;
+    if (timer_storage._pause_video_timer_id){
+        console.log("   - read pause_video_timer: id=", timer_storage._pause_video_timer_id);
+        return timer_storage._pause_video_timer_id;
     }else{
-        _init_pause_video_timer();
+        return -1;
     }
 }
 
@@ -155,11 +174,13 @@ function stop_pause_video_timer()
         console.log("stopping pause_video_timer: id=", timer);
         clearInterval(timer);
         _save_pause_video_timer(-1);
+    }else{
+        console.log("no pause_video_timer to stop");
     }
 }
 
 
-//https://stackoverflow.com/questions/326069/how-to-identify-if-a-webpage-is-being-loaded-inside-an-iframe-or-directly-into-t
+//https://stackoverflow.com/que
 function running_in_iframe() {
   try {
     return window.self !== window.top;
@@ -224,7 +245,6 @@ function show_overlay(){
 function hide_overlay(){
     var myNav = document.getElementById("myNav");
     myNav.style.width = "0%";
-    var dialog = document.querySelector('dialog');
     stop_pause_video_timer();
     // play_media("video");
     // play_media("audio");
@@ -274,3 +294,5 @@ if (window._js_injected_){
         __main();
     }, false);
 }
+
+})();

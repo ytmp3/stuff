@@ -1,11 +1,19 @@
 
 ## both
 
-### overlay popup after timeout incorrect size 
+### video not stopped
 
-https://www.lepoint.fr/video/
+https://www.boursorama.com/videos/
 
-### video restarted, but you can only hear the sound
+video in an iframe of another origin
+
+### video not stopped
+
+http://www.footmercato.net/flash-mercato/video-le-golazo-d-un-gardien-a-la-derniere-seconde-en-d4-belge_238810
+
+video in an iframe of another origin
+
+
 
 ## chromium
 
@@ -21,57 +29,35 @@ the javascript below has a content-type text/html and a javascript variable cont
 
 https://ads.pubmatic.com/AdServer/js/showad.js
 
-
-### video not stopped
-
-https://www.lepoint.fr/video/
-
-### overlay not displayed
-
-http://www.footmercato.net/flash-mercato/video-le-golazo-d-un-gardien-a-la-derniere-seconde-en-d4-belge_238810
+won't fix: the real injection from the ips won't be based on '<head>'
 
 
 ## firefox
 
-### video not stopped
+### problem with font encoding
 
-https://www.boursorama.com/videos/
+https://forums.cnetfrance.fr/
+
+### music not stopped
+
+http://www.ecouterradioenligne.com/
+http://www.europe1.fr/direct-audio
+https://www.rtl.fr/direct
 
 ### overlay not on top
 
 https://www.ndtv.com/cities/on-video-karnataka-woman-beats-bank-officer-over-sex-for-loan-demand-1932867
 
 
-
-
-
-
-
-http://www.carrefour.fr/jeux-consoles
-
-https://www.telestar.fr/actu-tv/slt/video-l-incroyable-chute-de-franz-olivier-giesbert-dans-les-terriens-du-dimanche-384326
-
-https://www.marmiton.org/pratique/techniques-culinaires-video-cuisine.aspx
-
-https://tvline.com/2018/10/02/single-parents-season-1-episode-2-angie-poppy-sleepovers-sex-video/
-
-
-
-https://www.midilibre.fr/videos/
-
-https://www.presse-citron.net/video-une-tesla-volee-en-pleine-nuit-par-des-hackers-maladroits/
-
-https://www.paris-normandie.fr/nos-videos
-
-https://www.lachainemeteo.com/videos-meteo/videos-meteo-france/bulletin-france-78
-
-http://www.allocine.fr/video/player_gen_cmedia=19580800&cserie=22654.html
-
-https://video.eurosport.fr/football/video-le-ceinturage-la-plaie-du-foot-que-le-var-peine-encore-a-limiter_vid1132424/video.shtml
+## fixed
 
 ### overlay not displayed
 
 http://www.footmercato.net/flash-mercato/video-le-golazo-d-un-gardien-a-la-derniere-seconde-en-d4-belge_238810
+
+### overlay popup after timeout incorrect size
+
+https://www.lepoint.fr/video/
 
 ### overlay not closing
 
@@ -82,3 +68,4 @@ http://www.footmercato.net/flash-mercato/video-le-golazo-d-un-gardien-a-la-derni
 https://www.instagram.com/p/BoO6M8EnhSQ/?tagged=naturevideo
 
 + click on a video and wait for 1 mn
+
