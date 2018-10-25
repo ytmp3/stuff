@@ -56,15 +56,10 @@ function onError(ctx, err, errorKind)
  */
 function onRequest(ctx, callback)
 {
-
-
     const host = ctx.clientToProxyRequest.headers["host"];
 
     const fullUrl = '//' + host + ctx.clientToProxyRequest.url;
-    console.log("onRequest: ", fullUrl);
-
-
-
+    // console.log("onRequest: ", fullUrl);
 
     if (host && host.startsWith("www.forcepoint.com")){
         if (ctx.clientToProxyRequest.url == "/blockpage_poc/clientpoc.js"){

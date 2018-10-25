@@ -78,7 +78,7 @@
 
 </style>
 
-<div id="myNav" class="overlay">
+<dialog id="myNav" class="overlay">
   <div class="overlay-content">
 <p/>
 Access to this page is blocked.
@@ -87,7 +87,7 @@ Click here to allow access for 1 minute
 <p/>
 <button id="myBtn">Allow</button>
   </div>
-</div>
+</dialog>
 
 `;
 
@@ -96,7 +96,7 @@ var TIME_ALLOWED_SEC = 60;
 function pause_media(type){
     var media = document.querySelectorAll(type);
     if (media){
-        console.log("pause_media type: '%s'=> found: %d", type,  media.length);
+        // console.log("pause_media type: '%s'=> found: %d", type,  media.length);
         for (let v of media){
              v.pause();
         }
@@ -114,7 +114,7 @@ function start_video_timer()
 {
     let timer = setInterval(()=>{
         if (is_overlay_visible()){
-            console.log("overlay visible: id=", timer);
+            // console.log("overlay visible: id=", timer);
             pause_media('audio');
             pause_media('video');
         }else{
@@ -177,8 +177,8 @@ function is_overlay_visible(){
     if (!myNav){
         return false;
     }
-    var w = myNav.style.width;
-    return w.startsWith('0')? false: true;
+    var w = myNav.style.display;
+    return w=="none"? false: true;
 }
 
 function show_overlay(){
@@ -188,12 +188,21 @@ function show_overlay(){
         myNav = document.getElementById("myNav");
     }
     myNav.style.width = "100%";
+    myNav.style.display="block";
+
+    if (myNav.showModal){
+        myNav.showModal();
+    }
     start_video_timer();
 }
 
 function hide_overlay(){
     var myNav = document.getElementById("myNav");
-    myNav.style.width = "0";
+    if (myNav.close){
+        myNav.close();
+    }
+    myNav.style.display="none";
+    // myNav.style.width = "0%";
 }
 
 function is_overlay_needed(){

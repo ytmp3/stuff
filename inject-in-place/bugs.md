@@ -17,26 +17,9 @@ video in an iframe of another origin
 
 ## chromium
 
-### violation settimeout handler
-
-100% cpu usage
-
-https://www.presse-citron.net/video-une-tesla-volee-en-pleine-nuit-par-des-hackers-maladroits/
-
-problem description:
-
-the javascript below has a content-type text/html and a javascript variable containing a '<head>', so injection takes place, which messes the execution
-
-https://ads.pubmatic.com/AdServer/js/showad.js
-
-won't fix: the real injection from the ips won't be based on '<head>'
-
 
 ## firefox
 
-### problem with font encoding
-
-https://forums.cnetfrance.fr/
 
 ### music not stopped
 
@@ -47,6 +30,8 @@ https://www.rtl.fr/direct
 ### overlay not on top
 
 https://www.ndtv.com/cities/on-video-karnataka-woman-beats-bank-officer-over-sex-for-loan-demand-1932867
+
+
 
 
 ## fixed
@@ -69,3 +54,26 @@ https://www.instagram.com/p/BoO6M8EnhSQ/?tagged=naturevideo
 
 + click on a video and wait for 1 mn
 
+
+### violation settimeout handler
+
+high cpu usage
+
+(quantcast banner)
+https://www.presse-citron.net/video-une-tesla-volee-en-pleine-nuit-par-des-hackers-maladroits/
+
+problem description:
+
+the javascript below has a content-type text/html and a javascript variable containing a '<head>', so injection takes place, which messes the execution
+
+https://ads.pubmatic.com/AdServer/js/showad.js
+
+
+### problem with font encoding
+
+https://forums.cnetfrance.fr/
+
+
+### quantcast banner on chrome
+
+https://www.presse-citron.net/video-une-tesla-volee-en-pleine-nuit-par-des-hackers-maladroits/
