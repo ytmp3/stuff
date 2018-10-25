@@ -1,13 +1,11 @@
 "use strict";
 
-const replaceStream = require('replacestream');
 const Proxy = require('http-mitm-proxy');
 
 const fs = require('fs');
 const net = require('net');
 const url = require('url');
 const http = require('http');
-const process = require('process');
 
 
 const ENABLE_INJECTION = true;
@@ -38,7 +36,7 @@ function override(object, methodName, callback)
 override(proxy, '_onHttpServerConnect', function(original) {
     return function(req, socket, head) {
         socket.addListener("error", (err) => {
-            console.log("**** _onHttpServerConnect: socket error", err);
+            console.log("**** _onHttpServerConnect: socket error", err.errno);
         });
         return original.apply(this, arguments);
     };
@@ -58,7 +56,16 @@ function onError(ctx, err, errorKind)
  */
 function onRequest(ctx, callback)
 {
+
+
     const host = ctx.clientToProxyRequest.headers["host"];
+
+    const fullUrl = '//' + host + ctx.clientToProxyRequest.url;
+    console.log("onRequest: ", fullUrl);
+
+
+
+
     if (host && host.startsWith("www.forcepoint.com")){
         if (ctx.clientToProxyRequest.url == "/blockpage_poc/clientpoc.js"){
             ctx.proxyToClientResponse.writeHead(200, {
@@ -103,32 +110,31 @@ function onResponse(ctx, callback)
     const is_xhr = ('x-requested-with' in req_headers);
     const is_cors = ('origin' in req_headers);
 
-    const must_inject = (ENABLE_INJECTION && is_html && !is_xhr && !is_cors);
+    ctx.must_inject = (ENABLE_INJECTION && is_html && !is_xhr && !is_cors);
 
 
-    if (must_inject)
+    if (ctx.must_inject)
     {
-        const injected_data = '<script src="https://www.forcepoint.com'+
-              '/blockpage_poc/clientpoc.js"></script>\n';
-
-
-
-        // const repl = replaceStream('</head>', injected_data + '\n</head>');
-        const repl = replaceStream(/(<head[^>]*>)/, '$1\n' + injected_data);
-        ctx.addResponseFilter(repl);
-
-        console.log(resp_headers['content-length']);
-        // console.log(resp_headers);
         delete resp_headers['content-length'];
+
     }
     return callback();
 }
 
+function onResponseData(ctx, chunk, callback){
+    if (ctx.must_inject && !ctx.injection_done){
+        ctx.injection_done = true;
+        const injected_data = '<!DOCTYPE html><script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>\n';
+        chunk = new Buffer(injected_data + chunk.toString());
+    }
+    return callback(null, chunk);
+}
 
 
 proxy.onError(onError);
 proxy.onRequest(onRequest);
 proxy.onResponse(onResponse);
+proxy.onResponseData(onResponseData);
 
 proxy.listen({
     port: PROXY_PORT,

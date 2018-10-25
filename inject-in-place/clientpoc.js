@@ -91,21 +91,17 @@ Click here to allow access for 1 minute
 
 `;
 
-
-
-
 var TIME_ALLOWED_SEC = 60;
-var timer_storage = localStorage;
 
-    function pause_media(type){
-        var media = document.querySelectorAll(type);
-        if (media){
-            console.log("pause_media: found ", media.lenth);
-            for (let v of media){
-                v.pause();
-            }
+function pause_media(type){
+    var media = document.querySelectorAll(type);
+    if (media){
+        console.log("pause_media type: '%s'=> found: %d", type,  media.length);
+        for (let v of media){
+             v.pause();
         }
     }
+}
 
 function play_media(type){
     for (let v of document.getElementsByTagName(type)){
@@ -113,74 +109,24 @@ function play_media(type){
     }
 }
 
-function pause_iframes(){
-    console.log("pause_iframes");
-    // for (let iframe of document.getElementsByTagName('iframe')){
-	// 	var iframeSrc = iframe.src;
-	// 	iframe.src = iframeSrc;
-	// }
-}
 
-function _save_pause_video_timer(id){
-    console.log("   - save pause_video_timer: id=", id, ": old value=",
-                timer_storage._pause_video_timer_id);
-    timer_storage._pause_video_timer_id = id;
-}
-
-function _init_pause_video_timer(){
-    console.log("   - init pause_video_timer: old value=",timer_storage._pause_video_timer_id);
-    if (!timer_storage._pause_video_timer_id){
-        timer_storage._pause_video_timer_id = -1;
-    }
-}
-
-function _read_pause_video_timer(){
-    if (timer_storage._pause_video_timer_id){
-        console.log("   - read pause_video_timer: id=", timer_storage._pause_video_timer_id);
-        return timer_storage._pause_video_timer_id;
-    }else{
-        return -1;
-    }
-}
-
-
-
-function start_pause_video_timer()
+function start_video_timer()
 {
-    if (!localStorage._pause_video_timer_){
-        _init_pause_video_timer();
-        pause_iframes();
-    }
-
-    let old_timer = _read_pause_video_timer();
-    if (old_timer != -1){
-        console.log("already have a timer");
-        stop_pause_video_timer();
-    }
-
     let timer = setInterval(()=>{
-        pause_media('audio');
-        pause_media('video');
+        if (is_overlay_visible()){
+            console.log("overlay visible: id=", timer);
+            pause_media('audio');
+            pause_media('video');
+        }else{
+            console.log("video_timer stopped: id=", timer);
+            clearInterval(timer);
+        }
     }, 500);
-    console.log("starting pause_video_timer: id=", timer);
-    _save_pause_video_timer(timer);
+    console.log("video_timer started: id=", timer);
 
 }
 
-function stop_pause_video_timer()
-{
-    let timer = _read_pause_video_timer();
-    if (timer != -1){
-        console.log("stopping pause_video_timer: id=", timer);
-        clearInterval(timer);
-        _save_pause_video_timer(-1);
-    }else{
-        console.log("no pause_video_timer to stop");
-    }
-}
 
-
-//https://stackoverflow.com/que
 function running_in_iframe() {
   try {
     return window.self !== window.top;
@@ -226,6 +172,15 @@ function insert_overlay(){
 }
 
 
+function is_overlay_visible(){
+    var myNav = document.getElementById("myNav");
+    if (!myNav){
+        return false;
+    }
+    var w = myNav.style.width;
+    return w.startsWith('0')? false: true;
+}
+
 function show_overlay(){
     var myNav = document.getElementById("myNav");
     if (!myNav){
@@ -233,21 +188,12 @@ function show_overlay(){
         myNav = document.getElementById("myNav");
     }
     myNav.style.width = "100%";
-    start_pause_video_timer();
+    start_video_timer();
 }
-
-// function show_overlay(){
-//     setTimeout(()=>{
-//         console.log("show_overlay...");
-//         show_overlay_1();}, 5000);
-// }
 
 function hide_overlay(){
     var myNav = document.getElementById("myNav");
-    myNav.style.width = "0%";
-    stop_pause_video_timer();
-    // play_media("video");
-    // play_media("audio");
+    myNav.style.width = "0";
 }
 
 function is_overlay_needed(){
@@ -268,16 +214,12 @@ function is_overlay_needed(){
 }
 
 function __main(){
-    _init_pause_video_timer();
-    pause_iframes();
-
     if (is_overlay_needed()){
         show_overlay();
     }else{
         start_overlay_timer(false);
     }
 }
-
 
 if (window._js_injected_){
     console.log("already injected");
