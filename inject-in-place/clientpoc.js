@@ -12,7 +12,7 @@
     top: 0;
     background-color: rgba(4,121,17,0.99);
     overflow-x: hidden;
-    transition: 0.2s;
+/*    transition: 0.2s;*/
 }
 
 #myNav p {
@@ -77,6 +77,8 @@
 
 
 </style>
+
+<iframe id="receiver" src="https://www.forcepoint.com/blockpage_poc/cross-domain-store.html" width="0" height="0"></iframe>
 
 <dialog id="myNav" class="overlay">
   <div class="overlay-content">
@@ -148,7 +150,7 @@ function start_overlay_timer(restart=false){
         localStorage._overlay_last_ = Date.now(); // msec
     }
 
-    remainingMsec = TIME_ALLOWED_SEC * 1000 -
+    var remainingMsec = TIME_ALLOWED_SEC * 1000 -
         (Date.now() - localStorage._overlay_last_);
 
     console.log("overlay timer started: ", remainingMsec);
@@ -159,6 +161,12 @@ function start_overlay_timer(restart=false){
 function on_overlay_button_clicked(){
     hide_overlay();
     start_overlay_timer(true);
+
+    var receiver = document.getElementById('receiver').contentWindow;
+    receiver.postMessage({msg:'cookie data!'}, 'https://www.forcepoint.com');
+    window.addEventListener('message', (e)=>{
+        console.log("parent got message: ", e);
+    });
 }
 
 function insert_overlay(){

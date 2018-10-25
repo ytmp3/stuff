@@ -1,5 +1,6 @@
 "use strict";
 
+const mime = require('mime');
 const Proxy = require('http-mitm-proxy');
 
 const fs = require('fs');
@@ -61,14 +62,27 @@ function onRequest(ctx, callback)
     const fullUrl = '//' + host + ctx.clientToProxyRequest.url;
     // console.log("onRequest: ", fullUrl);
 
-    if (host && host.startsWith("www.forcepoint.com")){
-        if (ctx.clientToProxyRequest.url == "/blockpage_poc/clientpoc.js"){
-            ctx.proxyToClientResponse.writeHead(200, {
-                'Content-Type': 'application/javascript'});
-            const content = fs.readFileSync("clientpoc.js");
-            ctx.proxyToClientResponse.end(content);
-            return null;
+    if (host && host.startsWith("www.forcepoint.com") &&
+        ctx.clientToProxyRequest.url.startsWith("/blockpage_poc")){
+        const url = ctx.clientToProxyRequest.url;
+        const ext = url.split('.').pop();
+        const fname = url.split('/').pop();
+
+        const headers = {
+            'Content-Type': mime.getType(ext)
+        };
+
+        let content = "";
+        let responseCode = 200;
+        try{
+            content = fs.readFileSync(fname);
+        } catch (err) {
+            responseCode = 404;
+            content=`error 404 ${fname} not found`;
         }
+        ctx.proxyToClientResponse.writeHead(responseCode, headers);
+        ctx.proxyToClientResponse.end(content);
+        return null;
     }
 
     if (ENABLE_COMPRESSION){
