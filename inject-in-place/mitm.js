@@ -6,7 +6,7 @@ const Proxy = require('http-mitm-proxy');
 
 const fs = require('fs');
 const net = require('net');
-const url = require('url');
+// const url = require('url');
 const http = require('http');
 
 
@@ -14,7 +14,10 @@ const ENABLE_INJECTION = true;
 const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
 
-const INJECTED_DATA = '<!DOCTYPE html><script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>\n';
+const INJECTED_SCRIPT = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
+// const INJECTED_SCRIPT = "https://www.forcepoint.com/blockpage_poc/clientpoc.js"
+
+const INJECTED_DATA = `<!DOCTYPE html><script src="${INJECTED_SCRIPT}"></script>\n`;
 
 const proxy = Proxy();
 
@@ -147,8 +150,10 @@ function onResponse(ctx, callback)
         const csp = resp_headers['content-security-policy'];
         if (csp){
             const policy = new Policy(csp);
-            var script = policy.get('script-src');
-            policy.add('script-src', 'https://www.forcepoint.com');
+            const script = policy.get('script-src');
+            const url = new URL(INJECTED_SCRIPT);
+
+            policy.add('script-src', url.origin);
             const modified_csp = policy.toString();
             console.log("### modified csp: %s", modified_csp);
             resp_headers['content-security-policy'] = modified_csp;
