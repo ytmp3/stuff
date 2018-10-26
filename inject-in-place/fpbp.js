@@ -1,7 +1,7 @@
 (function(){
 
     var overlay ='<style type="text/css">' +
-'.overlay {'+
+'.__fp_overlay {'+
 '    display: block;'+
 '    height: 100%;'+
 '    width: 0;'+
@@ -9,7 +9,7 @@
 '    z-index: 2147483647;'+
 '    left: 0;'+
 '    top: 0;'+
-'    background-color: rgba(4,121,17,0.70);'+
+'    background-color: rgba(4,121,17,0.90);'+
 '    overflow-x: hidden;'+
 '/*    transition: 0.2s;*/'+
 '}'+
@@ -32,7 +32,7 @@
 ''+
 '}'+
 ''+
-'#myNav .overlay-content {'+
+'#myNav .__fp_overlay-content {'+
 ''+
 '    position: relative;'+
 '    top: 25%;'+
@@ -77,8 +77,8 @@
 ''+
 '</style>'+
 ''+
-'<dialog id="myNav" class="overlay">'+
-'  <div class="overlay-content">'+
+'<dialog id="myNav" class="__fp_overlay">'+
+'  <div class="__fp_overlay-content">'+
 '<p/>'+
 'Access to this page is blocked.'+
 '<p/>'+
