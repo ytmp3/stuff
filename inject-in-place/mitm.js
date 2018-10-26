@@ -6,7 +6,6 @@ const Proxy = require('http-mitm-proxy');
 
 const fs = require('fs');
 const net = require('net');
-// const url = require('url');
 const http = require('http');
 
 
@@ -14,10 +13,10 @@ const ENABLE_INJECTION = true;
 const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
 
-const INJECTED_SCRIPT = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
-// const INJECTED_SCRIPT = "https://www.forcepoint.com/blockpage_poc/clientpoc.js"
+// const INJECTED_SCRIPT = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
+const INJECTED_SCRIPT = "https://www.forcepoint.com/blockpage_poc/clientpoc.js";
 
-const INJECTED_DATA = `<!DOCTYPE html><script src="${INJECTED_SCRIPT}"></script>\n`;
+const INJECTED_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_mn="1" src="${INJECTED_SCRIPT}"></script>\n`;
 
 const proxy = Proxy();
 

@@ -93,7 +93,10 @@ Click here to allow access for 1 minute
 
 `;
 
-var TIME_ALLOWED_SEC = 60;
+// by default prompt again after 10 mn
+var TIME_ALLOWED_MN = 10;
+
+
 
 function pause_media(type){
     var media = document.querySelectorAll(type);
@@ -144,16 +147,30 @@ function on_overlay_timer_expired(){
 }
 
 
+function get_time_allowed_msec(){
+    const fpscript = document.getElementById('__fp_bp_is');
+
+    const interval_mn = fpscript.dataset.interval_mn;
+    if (!interval_mn){
+        interval_mn = TIME_ALLOWED_MN;
+    }
+    console.log("interval_mn=", interval_mn);
+
+    const interval_msec = (interval_mn * 1000 * 60);
+    return interval_msec;
+}
+
 
 function start_overlay_timer(restart=false){
     if (!localStorage._overlay_last_ || restart){
         localStorage._overlay_last_ = Date.now(); // msec
     }
+    const interval_msec = get_time_allowed_msec();
 
-    var remainingMsec = TIME_ALLOWED_SEC * 1000 -
+    var remainingMsec = interval_msec -
         (Date.now() - localStorage._overlay_last_);
 
-    console.log("overlay timer started: ", remainingMsec);
+    console.log("overlay timer started (msec): ", remainingMsec);
     setTimeout(on_overlay_timer_expired, remainingMsec);
 }
 
@@ -162,11 +179,11 @@ function on_overlay_button_clicked(){
     hide_overlay();
     start_overlay_timer(true);
 
-    var receiver = document.getElementById('receiver').contentWindow;
-    receiver.postMessage({msg:'cookie data!'}, 'https://www.forcepoint.com');
-    window.addEventListener('message', (e)=>{
-        console.log("parent got message: ", e);
-    });
+    // var receiver = document.getElementById('receiver').contentWindow;
+    // receiver.postMessage({msg:'cookie data!'}, 'https://www.forcepoint.com');
+    // window.addEventListener('message', (e)=>{
+    //     console.log("parent got message: ", e);
+    // });
 }
 
 function insert_overlay(){
@@ -221,8 +238,10 @@ function is_overlay_needed(){
     }
 
     // allotted time passed => needed
-    elapsedMsec = Date.now() - localStorage._overlay_last_;
-    if (elapsedMsec > TIME_ALLOWED_SEC * 1000){
+    const elapsed_msec = Date.now() - localStorage._overlay_last_;
+    const interval_msec = get_time_allowed_msec();
+
+    if (elapsed_msec > interval_msec){
         console.log("overlay needed (time elapsed)");
         return true;
     }
@@ -231,6 +250,7 @@ function is_overlay_needed(){
 }
 
 function __main(){
+
     if (is_overlay_needed()){
         show_overlay();
     }else{
@@ -253,5 +273,6 @@ if (window._js_injected_){
         __main();
     }, false);
 }
+
 
 })();
