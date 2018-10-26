@@ -14,7 +14,7 @@ const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
 
 // const INJECTED_SCRIPT = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
-const INJECTED_SCRIPT = "https://www.forcepoint.com/blockpage_poc/clientpoc.js";
+const INJECTED_SCRIPT = "https://www.forcepoint.com/blockpage_poc/fpbp.js";
 
 const INJECTED_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_mn="1" src="${INJECTED_SCRIPT}"></script>\n`;
 
@@ -150,12 +150,13 @@ function onResponse(ctx, callback)
         if (csp){
             const policy = new Policy(csp);
             const script = policy.get('script-src');
-            const url = new URL(INJECTED_SCRIPT);
-
-            policy.add('script-src', url.origin);
-            const modified_csp = policy.toString();
-            console.log("### modified csp: %s", modified_csp);
-            resp_headers['content-security-policy'] = modified_csp;
+            if (script){
+                const url = new URL(INJECTED_SCRIPT);
+                policy.add('script-src', url.origin);
+                const modified_csp = policy.toString();
+                console.log("### modified csp: %s", modified_csp);
+                resp_headers['content-security-policy'] = modified_csp;
+            }
         }
     }
     return callback();
