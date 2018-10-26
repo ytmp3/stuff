@@ -1,95 +1,93 @@
 (function(){
 
-    var overlay = `
-<style type="text/css">
-.overlay {
-    display: block;
-    height: 100%;
-    width: 0;
-    position: fixed;
-    z-index: 2147483647;
-    left: 0;
-    top: 0;
-    background-color: rgba(4,121,17,0.70);
-    overflow-x: hidden;
-/*    transition: 0.2s;*/
-}
+    var overlay ='<style type="text/css">' +
+'.overlay {'+
+'    display: block;'+
+'    height: 100%;'+
+'    width: 0;'+
+'    position: fixed;'+
+'    z-index: 2147483647;'+
+'    left: 0;'+
+'    top: 0;'+
+'    background-color: rgba(4,121,17,0.70);'+
+'    overflow-x: hidden;'+
+'/*    transition: 0.2s;*/'+
+'}'+
+''+
+'#myNav p {'+
+'    text-align: center;'+
+'	font-size: 1em;'+
+'    font-family: arial,sans-serif;'+
+'    color: #eee;'+
+'	vertical-align: baseline;'+
+'	margin: 10px;'+
+'/*	padding: 0; */'+
+'/*	border: 0; */'+
+'    line-height: 2'+
+'    box-sizing: border-box;'+
+''+
+''+
+'	padding: 0;'+
+'	margin: 15px;'+
+''+
+'}'+
+''+
+'#myNav .overlay-content {'+
+''+
+'    position: relative;'+
+'    top: 25%;'+
+'    width: 100%;'+
+''+
+'    font-size: 36px;'+
+'}'+
+''+
+'#myNav button {'+
+'  position:relative;'+
+'  width: auto;'+
+'  display:inline-block;'+
+'  font-size: 20px;'+
+'  font-family: arial,sans-serif;'+
+'  color:#ecf0f1;'+
+'  text-decoration:none;'+
+'  border-radius:5px;'+
+'  border:solid 1px #f39c12;'+
+'  background:#e67e22;'+
+'  text-align:center;'+
+'  padding:16px 18px 14px;'+
+'  margin: 12px;'+
+''+
+'  -webkit-transition: all 0.1s;'+
+'	-moz-transition: all 0.1s;'+
+'	transition: all 0.1s;'+
+''+
+'  -webkit-box-shadow: 0px 6px 0px #d35400;'+
+'  -moz-box-shadow: 0px 6px 0px #d35400;'+
+'  box-shadow: 0px 6px 0px #d35400;'+
+'}'+
+''+
+'#myNav button:active{'+
+'    -webkit-box-shadow: 0px 2px 0px #d35400;'+
+'    -moz-box-shadow: 0px 2px 0px #d35400;'+
+'    box-shadow: 0px 2px 0px #d35400;'+
+'    position:relative;'+
+'    top:4px;'+
+'}'+
+''+
+''+
+''+
+'</style>'+
+''+
+'<dialog id="myNav" class="overlay">'+
+'  <div class="overlay-content">'+
+'<p/>'+
+'Access to this page is blocked.'+
+'<p/>'+
+'Click here to allow access for 1 minute'+
+'<p/>'+
+'<button id="myBtn">Allow</button>'+
+'  </div>'+
+'</dialog>';
 
-#myNav p {
-    text-align: center;
-	font-size: 1em;
-    font-family: arial,sans-serif;
-    color: #eee;
-	vertical-align: baseline;
-	margin: 10px;
-/*	padding: 0; */
-/*	border: 0; */
-    line-height: 2
-    box-sizing: border-box;
-
-
-	padding: 0;
-	margin: 15px;
-
-}
-
-#myNav .overlay-content {
-
-    position: relative;
-    top: 25%;
-    width: 100%;
-
-    font-size: 36px;
-}
-
-#myNav button {
-  position:relative;
-  width: auto;
-  display:inline-block;
-  font-size: 20px;
-  font-family: arial,sans-serif;
-  color:#ecf0f1;
-  text-decoration:none;
-  border-radius:5px;
-  border:solid 1px #f39c12;
-  background:#e67e22;
-  text-align:center;
-  padding:16px 18px 14px;
-  margin: 12px;
-
-  -webkit-transition: all 0.1s;
-	-moz-transition: all 0.1s;
-	transition: all 0.1s;
-
-  -webkit-box-shadow: 0px 6px 0px #d35400;
-  -moz-box-shadow: 0px 6px 0px #d35400;
-  box-shadow: 0px 6px 0px #d35400;
-}
-
-#myNav button:active{
-    -webkit-box-shadow: 0px 2px 0px #d35400;
-    -moz-box-shadow: 0px 2px 0px #d35400;
-    box-shadow: 0px 2px 0px #d35400;
-    position:relative;
-    top:4px;
-}
-
-
-
-</style>
-
-<dialog id="myNav" class="overlay">
-  <div class="overlay-content">
-<p/>
-Access to this page is blocked.
-<p/>
-Click here to allow access for 1 minute
-<p/>
-<button id="myBtn">Allow</button>
-  </div>
-</dialog>
-
-`;
 
     // by default prompt again after 1 mn
     var TIME_ALLOWED_SEC = 10;
@@ -161,14 +159,19 @@ Click here to allow access for 1 minute
         }
     }
 
+    function fragmentFromString(strHTML) {
+        return document.createRange().createContextualFragment(strHTML);
+    }
     /**
      * insert the html/css to display the overlay at the beginning of the
      * page
      */
     function insert_overlay(){
-        var temp = document.createElement('template');
-        temp.innerHTML = overlay;
-        var frag = temp.content;
+        // var temp = document.createElement('template');
+        // temp.innerHTML = overlay;
+        // var frag = temp.content;
+        var frag = fragmentFromString(overlay);
+        console.log("********", frag);
         document.body.insertBefore(frag, document.body.firstChild);
 
         var myBtn = document.getElementById("myBtn");
@@ -254,7 +257,12 @@ Click here to allow access for 1 minute
         var body = document.createElement("body");
         document.documentElement.appendChild(body);
         show_overlay();
-        window.stop();
+        if (window.stop){
+            window.stop();
+        }else{
+            // MSIE
+            document.execCommand("Stop");
+        }
     }
 
     main();
