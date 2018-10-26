@@ -9,6 +9,7 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "csp-parse": "0.0.2",
         "http-mitm-proxy": "^0.6.1",
         "mime": "^2.3.1",
         "replacestream": "^4.0.3"

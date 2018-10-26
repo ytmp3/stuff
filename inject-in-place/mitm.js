@@ -1,5 +1,6 @@
 "use strict";
 
+var Policy = require('csp-parse');
 const mime = require('mime');
 const Proxy = require('http-mitm-proxy');
 
@@ -12,6 +13,8 @@ const http = require('http');
 const ENABLE_INJECTION = true;
 const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
+
+const INJECTED_DATA = '<!DOCTYPE html><script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>\n';
 
 const proxy = Proxy();
 
@@ -62,24 +65,40 @@ function onRequest(ctx, callback)
     const fullUrl = '//' + host + ctx.clientToProxyRequest.url;
     // console.log("onRequest: ", fullUrl);
 
-    if (host && host.startsWith("www.forcepoint.com") &&
-        ctx.clientToProxyRequest.url.startsWith("/blockpage_poc")){
+    const isFakeServer = fullUrl.startsWith("//www.example.com");
+
+    if (isFakeServer || fullUrl.startsWith("//www.forcepoint.com/blockpage_poc")){
         const url = ctx.clientToProxyRequest.url;
         const ext = url.split('.').pop();
         const fname = url.split('/').pop();
+        const mimeType = mime.getType(ext);
 
         const headers = {
-            'Content-Type': mime.getType(ext)
+            'Content-Type': mimeType
         };
 
-        let content = "";
+
         let responseCode = 200;
+        let content = "";
         try{
             content = fs.readFileSync(fname);
         } catch (err) {
             responseCode = 404;
             content=`error 404 ${fname} not found`;
         }
+
+        if (isFakeServer){
+            // const INJECTED_DATA2 =
+            //     '<!DOCTYPE html><meta http-equiv="Content-Security-Policy" content="script-src https://www.forcepoint.com"/><script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>\n';
+
+            headers["Content-Security-Policy"] = ["script-src 'self' https://code.jquery.com 'sha256-GoCTp92A/44wB06emgkrv9wmZJA7kgX/VK3D+9jr/Pw='", "script-src https://www.forcepoint.com"];
+
+
+            // if (mimeType.startsWith('text/html')){
+            //     content = INJECTED_DATA2 + content;
+            // }
+        }
+
         ctx.proxyToClientResponse.writeHead(responseCode, headers);
         ctx.proxyToClientResponse.end(content);
         return null;
@@ -104,7 +123,7 @@ function onResponse(ctx, callback)
     const req_headers = ctx.clientToProxyRequest.headers;
 
     // !!!! todo: for now we remove the csp header
-    delete resp_headers['content-security-policy'];
+    // delete resp_headers['content-security-policy'];
 
     /* The Expect-CT header allows sites to opt in to reporting
      * and/or enforcement of Certificate Transparency
@@ -125,7 +144,15 @@ function onResponse(ctx, callback)
     if (ctx.must_inject)
     {
         delete resp_headers['content-length'];
-
+        const csp = resp_headers['content-security-policy'];
+        if (csp){
+            const policy = new Policy(csp);
+            var script = policy.get('script-src');
+            policy.add('script-src', 'https://www.forcepoint.com');
+            const modified_csp = policy.toString();
+            console.log("### modified csp: %s", modified_csp);
+            resp_headers['content-security-policy'] = modified_csp;
+        }
     }
     return callback();
 }
@@ -133,8 +160,7 @@ function onResponse(ctx, callback)
 function onResponseData(ctx, chunk, callback){
     if (ctx.must_inject && !ctx.injection_done){
         ctx.injection_done = true;
-        const injected_data = '<!DOCTYPE html><script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>\n';
-        chunk = new Buffer(injected_data + chunk.toString());
+        chunk = new Buffer(INJECTED_DATA + chunk.toString());
     }
     return callback(null, chunk);
 }
