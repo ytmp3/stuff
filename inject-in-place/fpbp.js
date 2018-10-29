@@ -1,92 +1,50 @@
 (function(){
 
-    var overlay ='<style type="text/css">' +
-'.__fp_overlay {'+
+    var overlay = '<style type="text/css">' +
+'#__fp_overlay * {'+
+'    box-sizing: border-box;'+
+'}'+
+'#__fp_overlay {'+
 '    display: block;'+
 '    height: 100%;'+
-'    width: 0;'+
+'    width: 100%;'+
 '    position: fixed;'+
 '    z-index: 2147483647;'+
 '    left: 0;'+
 '    top: 0;'+
+'    padding: 20px;'+
+'    margin: auto;'+
+'    border: 0;'+
 '    background-color: rgba(4,121,17,0.90);'+
-'    overflow-x: hidden;'+
-'/*    transition: 0.2s;*/'+
 '}'+
-''+
-'#myNav p {'+
-'    text-align: center;'+
-'	font-size: 1em;'+
-'    font-family: arial,sans-serif;'+
-'    color: #eee;'+
-'	vertical-align: baseline;'+
-'	margin: 10px;'+
-'/*	padding: 0; */'+
-'/*	border: 0; */'+
-'    line-height: 2'+
-'    box-sizing: border-box;'+
-''+
-''+
-'	padding: 0;'+
-'	margin: 15px;'+
-''+
-'}'+
-''+
-'#myNav .__fp_overlay-content {'+
-''+
-'    position: relative;'+
-'    top: 25%;'+
-'    width: 100%;'+
-''+
-'    font-size: 36px;'+
-'}'+
-''+
-'#myNav button {'+
-'  position:relative;'+
-'  width: auto;'+
-'  display:inline-block;'+
-'  font-size: 20px;'+
-'  font-family: arial,sans-serif;'+
-'  color:#ecf0f1;'+
-'  text-decoration:none;'+
-'  border-radius:5px;'+
-'  border:solid 1px #f39c12;'+
-'  background:#e67e22;'+
-'  text-align:center;'+
-'  padding:16px 18px 14px;'+
-'  margin: 12px;'+
-''+
-'  -webkit-transition: all 0.1s;'+
-'	-moz-transition: all 0.1s;'+
-'	transition: all 0.1s;'+
-''+
-'  -webkit-box-shadow: 0px 6px 0px #d35400;'+
-'  -moz-box-shadow: 0px 6px 0px #d35400;'+
-'  box-shadow: 0px 6px 0px #d35400;'+
-'}'+
-''+
-'#myNav button:active{'+
-'    -webkit-box-shadow: 0px 2px 0px #d35400;'+
-'    -moz-box-shadow: 0px 2px 0px #d35400;'+
-'    box-shadow: 0px 2px 0px #d35400;'+
-'    position:relative;'+
-'    top:4px;'+
-'}'+
-''+
-''+
 ''+
 '</style>'+
 ''+
-'<dialog id="myNav" class="__fp_overlay">'+
-'  <div class="__fp_overlay-content">'+
-'<p/>'+
-'Access to this page is blocked.'+
-'<p/>'+
-'Click here to allow access for 1 minute'+
-'<p/>'+
-'<button id="myBtn">Allow</button>'+
-'  </div>'+
+'<dialog id="__fp_overlay" >'+
+//'    <iframe id="__fp_overlay_iframe" src="#" style="width:70%;height:50%; padding: 20px; margin: auto;border: 0; "></iframe>'+
+'    <iframe id="__fp_overlay_iframe" src="javascript:" style=""></iframe>'+
 '</dialog>';
+
+
+    var overlay_content = `
+<html>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <head>
+    <style>
+    body {
+    background-color: #fff;
+    }
+    </style>
+  </head>
+  <body>
+    <div>
+       Access to this page is blocked.
+       Click here to allow access for X minutes
+    </div>
+    <button id="__fp_overlay_allow">Allow</button>
+  </body>
+</html>
+`;
 
 
     // by default prompt again after 1 mn
@@ -116,7 +74,7 @@
                 interval_sec = fpscript.dataset.interval_sec;
             }
         }
-        console.log("interval_sec=", interval_sec);
+        console.log("=> interval_sec=", interval_sec);
 
         var interval_msec = (interval_sec * 1000);
         return interval_msec;
@@ -170,46 +128,50 @@
         // var temp = document.createElement('template');
         // temp.innerHTML = overlay;
         // var frag = temp.content;
-        var frag = fragmentFromString(overlay);
-        console.log("********", frag);
-        document.body.insertBefore(frag, document.body.firstChild);
+        var overlay_frag = fragmentFromString(overlay);
+        document.body.insertBefore(overlay_frag, document.body.firstChild);
 
-        var myBtn = document.getElementById("myBtn");
-        myBtn.addEventListener("click", on_overlay_button_clicked);
+        var overlay_iframe = document.getElementById("__fp_overlay_iframe");
+        var overlay_content_frag = fragmentFromString(overlay_content);
+        overlay_iframe.contentDocument.body.appendChild(overlay_content_frag);
+
+
+        var overlay_allow_button = overlay_iframe.contentDocument.getElementById("__fp_overlay_allow");
+        overlay_allow_button.addEventListener("click", on_overlay_button_clicked);
     }
 
     /**
      * return true if the overlay is currently visible
      */
     function is_overlay_visible(){
-        var myNav = document.getElementById("myNav");
-        if (!myNav){
+        var overlay = document.getElementById("__fp_overlay");
+        if (!overlay){
             return false;
         }
-        var w = myNav.style.display;
+        var w = overlay.style.display;
         return w=="none"? false: true;
     }
 
     function show_overlay(){
-        var myNav = document.getElementById("myNav");
-        if (!myNav){
+        var overlay = document.getElementById("__fp_overlay");
+        if (!overlay){
             insert_overlay();
-            myNav = document.getElementById("myNav");
+            overlay = document.getElementById("__fp_overlay");
         }
-        myNav.style.width = "100%";
-        myNav.style.display="block";
+        overlay.style.width = "100%";
+        overlay.style.display="block";
 
-        if (myNav.showModal){
-            myNav.showModal();
+        if (overlay.showModal){
+            overlay.showModal();
         }
     }
 
     function hide_overlay(){
-        var myNav = document.getElementById("myNav");
-        if (myNav.close){
-            myNav.close();
+        var overlay = document.getElementById("__fp_overlay");
+        if (overlay.close){
+            overlay.close();
         }
-        myNav.style.display="none";
+        overlay.style.display="none";
     }
 
     /**
@@ -254,6 +216,13 @@
 
         window.__fp_initial = true;
 
+        var x = document.getElementById("__fp_bp_is");
+        console.log(x);
+        console.log(x.attributes);
+        console.log(x.dataset);
+        console.log(x.dataset.interval_sec);
+        console.log(x.dataset["interval_sec"]);
+//debugger;
         var body = document.createElement("body");
         document.documentElement.appendChild(body);
         show_overlay();

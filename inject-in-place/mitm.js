@@ -16,7 +16,7 @@ const PROXY_PORT = 8081;
 // const INJECTED_SCRIPT = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
 const INJECTED_SCRIPT = "https://www.forcepoint.com/blockpage_poc/fpbp.js";
 
-const INJECTED_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_mn="1" src="${INJECTED_SCRIPT}"></script>\n`;
+const INJECTED_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="8" src="${INJECTED_SCRIPT}"></script>\n`;
 
 const proxy = Proxy();
 
