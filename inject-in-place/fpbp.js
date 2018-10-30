@@ -73,6 +73,20 @@
     // by default prompt again after 1 mn
     var TIME_ALLOWED_SEC = 10;
 
+    // from https://gist.github.com/3277292
+    function render_template(template, context){
+        return template.replace(/{{\s*([a-zA-z0-9_.]+)\s*}}/gm, function(m, key){
+            var value;
+            var source = context;
+            var subkeys = key.split('.');
+
+            for (var i in subkeys) {
+                value = source.hasOwnProperty(subkeys[i]) ? source[subkeys[i]] : '';
+                source = value;
+            }
+            return value;
+        });
+    }
 
     /* return true if the current window is in an iframe
      */
@@ -101,6 +115,15 @@
         if (!fpscript){return null;}
 
         return fpscript.dataset[key];
+    }
+
+
+    function expand_template_with_dataset(template){
+        var fpscript = document.getElementById('__fp_bp_is');
+        if (!fpscript){return template;}
+
+        var res = render_template(template, fpscript.dataset);
+        return res;
     }
 
     function get_overlay_content(){
@@ -197,7 +220,9 @@
             return;
         }
 
-        var overlay_content = get_overlay_content();
+        var overlay_content_template = get_overlay_content();
+        var overlay_content =
+            expand_template_with_dataset(overlay_content_template);
 
         content_doc.open();
         content_doc.write(overlay_content);
