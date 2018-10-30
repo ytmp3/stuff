@@ -8,15 +8,33 @@ const fs = require('fs');
 const net = require('net');
 const http = require('http');
 
-
 const ENABLE_INJECTION = true;
 const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
 
+
+const DEFAULT_OVERLAY_CONTENT = `
+<html>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <body>
+    <div>
+       ACCESS TO THIS PAGE IS BLOCKED (CORPORATE POLICY)
+    </div>
+    <button id="__fp_overlay_allow">Access anyway</button>
+    <button id="__fp_overlay_back">Go back</button>
+  </body>
+</html>`;
+
+const DEFAULT_OVERLAY_CONTENT_BASE64 =
+      Buffer.from(DEFAULT_OVERLAY_CONTENT).toString('base64');
+
+
+console.log(DEFAULT_OVERLAY_CONTENT_BASE64);
+
 // const INJECTED_SCRIPT = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
 const INJECTED_SCRIPT = "https://www.forcepoint.com/blockpage_poc/fpbp.js";
 
-const INJECTED_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="10" src="${INJECTED_SCRIPT}"></script>\n`;
+const INJECTED_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="10" src="${INJECTED_SCRIPT}" data-content="${DEFAULT_OVERLAY_CONTENT_BASE64}"></script>\n`;
 
 const proxy = Proxy();
 

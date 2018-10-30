@@ -15,7 +15,7 @@
 '    padding: 0;'+
 '    margin: 0;'+
 '    border: 0;'+
-'    background-color: rgba(4,121,17,0.90);'+
+'    background-color: rgba(80,0,0,0.90);'+
 '}'+
 ''+
 '#__fp_overlay .outer {' +
@@ -56,7 +56,7 @@
 
 
 
-    var overlay_content =
+    var DEFAULT_OVERLAY_CONTENT =
 '<html>' +
 '  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />' +
 '  <body>' +
@@ -89,10 +89,26 @@
         if (!media){return;}
         for (var i=0;i<media.length; i++){
             var v = media[i];
-            if ( v.pause){
+            if (v.pause){
                 v.pause();
             }
         }
+    }
+
+
+    function get_data(key){
+        var fpscript = document.getElementById('__fp_bp_is');
+        if (!fpscript){return null;}
+
+        return fpscript.dataset[key];
+    }
+
+    function get_overlay_content(){
+        var overlay_content = get_data('content');
+        if (overlay_content){
+            return atob(overlay_content);
+        }
+        return DEFAULT_OVERLAY_CONTENT;
     }
 
     /**
@@ -167,7 +183,6 @@
         document.body.insertBefore(overlay_frag, document.body.firstChild);
 
         var overlay_iframe = document.getElementById("__fp_overlay_iframe");
-        var overlay_content_frag = fragmentFromString(overlay_content);
 
         var content_doc = null;
 
@@ -181,6 +196,8 @@
                         "unable to access contentDocument iframe");
             return;
         }
+
+        var overlay_content = get_overlay_content();
 
         content_doc.open();
         content_doc.write(overlay_content);
