@@ -18,57 +18,53 @@
 '    background-color: rgba(4,121,17,0.90);'+
 '}'+
 ''+
-'</style>'+
-''+
-'<dialog id="__fp_overlay" >'+
-//'    <iframe id="__fp_overlay_iframe" src="#" style="width:70%;height:50%; padding: 20px; margin: auto;border: 0; "></iframe>'+
-'    <iframe id="__fp_overlay_iframe" src="javascript:" style="position: absolute; width: 100%; height:100%; border: 0; padding: 0; margin: 0; overflow: none"></iframe>'+
-'</dialog>';
-
-// https://stackoverflow.com/questions/396145/how-to-vertically-center-a-div-for-all-browsers
-    var overlay_content =
-'<html>' +
-'  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />' +
-'  <head>' +
-'    <style>' +
-'.outer {' +
+'#__fp_overlay .outer {' +
 '  display: table;' +
 '  position: absolute;overflow: none;' +
 '  height: 100%;' +
 '  width: 100%;' +
 '}' +
 '' +
-'.middle {' +
+'#__fp_overlay .middle {' +
 '  display: table-cell;' +
 '  vertical-align: middle;' +
 '}' +
 '' +
-'.inner {' +
+'#__fp_overlay .inner {' +
 '  margin-left: auto;' +
 '  margin-right: auto;' +
-'  width: 400px;' +
 '  padding: 10px;' +
-'  /*whatever width you want*/' +
+'  width: 600px;' +
+'}' +
+'#__fp_overlay_iframe {' +
+'    width: 100%;' +
 '    background-color: #fff;' +
+'    border: 0;' +
 '}' +
 '' +
-'    body {' +
-'margin: 0;' +
-'    }' +
-'    </style>' +
-'  </head>' +
-'  <body>' +
+
+'</style>'+
+''+
+'<dialog id="__fp_overlay" >'+
 '<div class="outer">' +
 '  <div class="middle">' +
-'    <div class="inner">' +
+'  <div class="inner">' +
+'    <iframe  id="__fp_overlay_iframe" src="javascript:null"></iframe>'+
+'  </div>' +
+'  </div>' +
+'</div>' +
+
+'</dialog>';
+
+    var overlay_content =
+'<html>' +
+'  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />' +
+'  <body>' +
 '    <div>' +
 '       Access to this page is blocked (corporate policy)' +
 '    </div>' +
 '    <button id="__fp_overlay_allow">Access anyway</button>' +
 '    <button id="__fp_overlay_back">Go back</button>' +
-'    </div>' +
-'  </div>' +
-'</div>' +
 '  </body>' +
 '</html>'
 ;
@@ -148,6 +144,17 @@
         }
     }
 
+    function pause_media(type){
+        var media = document.querySelectorAll(type);
+        if (!media){return;}
+        for (var i=0;i<media.length; i++){
+            var v = media[i];
+            if ( v.pause){
+                v.pause();
+            }
+        }
+    }
+
     function fragmentFromString(strHTML) {
         return document.createRange().createContextualFragment(strHTML);
     }
@@ -201,6 +208,13 @@
     }
 
     function show_overlay(){
+        try{
+            pause_media("audio");
+            pause_media("video");
+        }catch(e){
+            console.log("show_overlay: pause_media error (ignored)", e);
+        }
+
         var overlay = document.getElementById("__fp_overlay");
         if (!overlay){
             insert_overlay();
@@ -264,21 +278,15 @@
 
         window.__fp_initial = true;
 
-        var x = document.getElementById("__fp_bp_is");
-        console.log(x);
-        console.log(x.attributes);
-        console.log(x.dataset);
-        console.log(x.dataset.interval_sec);
-        console.log(x.dataset["interval_sec"]);
+        // var x = document.getElementById("__fp_bp_is");
+        // console.log(x);
+        // console.log(x.attributes);
+        // console.log(x.dataset);
+        // console.log(x.dataset.interval_sec);
+        // console.log(x.dataset["interval_sec"]);
         var body = document.createElement("body");
         document.documentElement.appendChild(body);
         show_overlay();
-
-        // try{
-        //     show_overlay();
-        // }catch(e){
-        //     console.log("show_overlay error: ", e.stack);
-        // }
         if (window.stop){
             window.stop();
         }else{
