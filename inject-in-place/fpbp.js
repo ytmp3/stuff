@@ -12,8 +12,8 @@
 '    z-index: 2147483647;'+
 '    left: 0;'+
 '    top: 0;'+
-'    padding: 20px;'+
-'    margin: auto;'+
+'    padding: 0;'+
+'    margin: 0;'+
 '    border: 0;'+
 '    background-color: rgba(4,121,17,0.90);'+
 '}'+
@@ -22,29 +22,56 @@
 ''+
 '<dialog id="__fp_overlay" >'+
 //'    <iframe id="__fp_overlay_iframe" src="#" style="width:70%;height:50%; padding: 20px; margin: auto;border: 0; "></iframe>'+
-'    <iframe id="__fp_overlay_iframe" src="javascript:" style=""></iframe>'+
+'    <iframe id="__fp_overlay_iframe" src="javascript:" style="position: absolute; width: 100%; height:100%; border: 0; padding: 0; margin: 0; overflow: none"></iframe>'+
 '</dialog>';
 
-
-    var overlay_content = `
-<html>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <head>
-    <style>
-    body {
-    background-color: #fff;
-    }
-    </style>
-  </head>
-  <body>
-    <div>
-       Access to this page is blocked.
-       Click here to allow access for X minutes
-    </div>
-    <button id="__fp_overlay_allow">Allow</button>
-  </body>
-</html>
-`;
+// https://stackoverflow.com/questions/396145/how-to-vertically-center-a-div-for-all-browsers
+    var overlay_content =
+'<html>' +
+'  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />' +
+'  <head>' +
+'    <style>' +
+'.outer {' +
+'  display: table;' +
+'  position: absolute;overflow: none;' +
+'  height: 100%;' +
+'  width: 100%;' +
+'}' +
+'' +
+'.middle {' +
+'  display: table-cell;' +
+'  vertical-align: middle;' +
+'}' +
+'' +
+'.inner {' +
+'  margin-left: auto;' +
+'  margin-right: auto;' +
+'  width: 400px;' +
+'  padding: 10px;' +
+'  /*whatever width you want*/' +
+'    background-color: #fff;' +
+'}' +
+'' +
+'    body {' +
+'margin: 0;' +
+'    }' +
+'    </style>' +
+'  </head>' +
+'  <body>' +
+'<div class="outer">' +
+'  <div class="middle">' +
+'    <div class="inner">' +
+'    <div>' +
+'       Access to this page is blocked (corporate policy)' +
+'    </div>' +
+'    <button id="__fp_overlay_allow">Access anyway</button>' +
+'    <button id="__fp_overlay_back">Go back</button>' +
+'    </div>' +
+'  </div>' +
+'</div>' +
+'  </body>' +
+'</html>'
+;
 
 
     // by default prompt again after 1 mn
@@ -105,6 +132,10 @@
     }
 
 
+    function on_overlay_button_back(){
+        window.history.back();
+    }
+
     function on_overlay_button_clicked(){
         hide_overlay();
         reset_overlay_timer();
@@ -120,24 +151,41 @@
     function fragmentFromString(strHTML) {
         return document.createRange().createContextualFragment(strHTML);
     }
+
     /**
      * insert the html/css to display the overlay at the beginning of the
      * page
      */
     function insert_overlay(){
-        // var temp = document.createElement('template');
-        // temp.innerHTML = overlay;
-        // var frag = temp.content;
         var overlay_frag = fragmentFromString(overlay);
         document.body.insertBefore(overlay_frag, document.body.firstChild);
 
         var overlay_iframe = document.getElementById("__fp_overlay_iframe");
         var overlay_content_frag = fragmentFromString(overlay_content);
-        overlay_iframe.contentDocument.body.appendChild(overlay_content_frag);
 
+        var content_doc = null;
 
-        var overlay_allow_button = overlay_iframe.contentDocument.getElementById("__fp_overlay_allow");
+        if (overlay_iframe.contentDocument){
+            content_doc = overlay_iframe.contentDocument;
+        }else if (overlay_iframe.contentWindow){
+            content_doc = overlay_iframe.contentWindow.document;
+        }
+        else{
+            console.log("Error in insert_overlay: "+
+                        "unable to access contentDocument iframe");
+            return;
+        }
+
+        content_doc.open();
+        content_doc.write(overlay_content);
+        content_doc.close();
+
+        var overlay_allow_button =
+            content_doc.getElementById("__fp_overlay_allow");
         overlay_allow_button.addEventListener("click", on_overlay_button_clicked);
+        var overlay_back_button =
+            content_doc.getElementById("__fp_overlay_back");
+        overlay_back_button.addEventListener("click", on_overlay_button_back);
     }
 
     /**
@@ -222,10 +270,15 @@
         console.log(x.dataset);
         console.log(x.dataset.interval_sec);
         console.log(x.dataset["interval_sec"]);
-//debugger;
         var body = document.createElement("body");
         document.documentElement.appendChild(body);
         show_overlay();
+
+        // try{
+        //     show_overlay();
+        // }catch(e){
+        //     console.log("show_overlay error: ", e.stack);
+        // }
         if (window.stop){
             window.stop();
         }else{
