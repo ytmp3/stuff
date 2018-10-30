@@ -42,7 +42,6 @@
 '    border: 0;' +
 '}' +
 '' +
-
 '</style>'+
 ''+
 '<dialog id="__fp_overlay" >'+
@@ -53,8 +52,9 @@
 '  </div>' +
 '  </div>' +
 '</div>' +
-
 '</dialog>';
+
+
 
     var overlay_content =
 '<html>' +
@@ -84,6 +84,17 @@
         }
     }
 
+    function pause_media(type){
+        var media = document.querySelectorAll(type);
+        if (!media){return;}
+        for (var i=0;i<media.length; i++){
+            var v = media[i];
+            if ( v.pause){
+                v.pause();
+            }
+        }
+    }
+
     /**
      * return the time the user is allowed to brows in msec. This
      * information is passed as a dom attribute during script injection
@@ -108,7 +119,6 @@
         console.log("overlay timer expired");
         show_overlay();
     }
-
 
     function reset_overlay_timer(){
         localStorage.__fp_overlay_last_ = Date.now(); // msec
@@ -141,17 +151,6 @@
             window.__fp_initial = false;
         }else{
             start_overlay_timer();
-        }
-    }
-
-    function pause_media(type){
-        var media = document.querySelectorAll(type);
-        if (!media){return;}
-        for (var i=0;i<media.length; i++){
-            var v = media[i];
-            if ( v.pause){
-                v.pause();
-            }
         }
     }
 
@@ -277,13 +276,6 @@
         }
 
         window.__fp_initial = true;
-
-        // var x = document.getElementById("__fp_bp_is");
-        // console.log(x);
-        // console.log(x.attributes);
-        // console.log(x.dataset);
-        // console.log(x.dataset.interval_sec);
-        // console.log(x.dataset["interval_sec"]);
         var body = document.createElement("body");
         document.documentElement.appendChild(body);
         show_overlay();
