@@ -274,5 +274,4 @@ if (window._js_injected_){
     }, false);
 }
 
-
 })();

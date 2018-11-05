@@ -1,7 +1,6 @@
 "use strict";
 
-const Policy = require('./csp-parse');
-const crypto = require('crypto');
+var Policy = require('csp-parse');
 const mime = require('mime');
 const Proxy = require('http-mitm-proxy');
 
@@ -9,37 +8,15 @@ const fs = require('fs');
 const net = require('net');
 const http = require('http');
 
+
 const ENABLE_INJECTION = true;
 const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
 
-const DEFAULT_OVERLAY_CONTENT = `
-<html>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <body>
-    <div>
-       ACCESS TO THIS PAGE IS BLOCKED FOR {{interval_sec}} seconds (CORPORATE POLICY)
-       <br/>
-       category: {{category}}
-    </div>
-    <button id="__fp_overlay_allow">Access anyway</button>
-    <button id="__fp_overlay_back">Go back</button>
-  </body>
-</html>`;
+// const INJECTED_SCRIPT = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
+const INJECTED_SCRIPT = "https://www.forcepoint.com/blockpage_poc/clientpoc.js";
 
-// 'url' or 'content'
-// const INJECTION_METHOD = 'content';
-const INJECTION_METHOD = 'content';
-
-// const INJECTED_SCRIPT_URL = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
-const INJECTED_SCRIPT_URL = "https://www.forcepoint.com/blockpage_poc/fpbp.js";
-
-const INJECTED_SCRIPT = __dirname + "/fpbp.js";
-
-
-var g_injected_content = null;
-var g_injected_hash = null;
-
+const INJECTED_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_mn="1" src="${INJECTED_SCRIPT}"></script>\n`;
 
 const proxy = Proxy();
 
@@ -79,52 +56,6 @@ function onError(ctx, err, errorKind)
     console.error("**** " + errorKind + ' on ' + url + ':', err);
 }
 
-
-function getCspHash(data){
-    const hash = crypto.createHash('sha256');
-    const h = hash.update(data);
-    const sha256buffer = hash.digest(h);
-    const sha256base64 = Buffer.from(sha256buffer).toString('base64');
-    return 'sha256-' + sha256base64;
-}
-
-
-
-function getInjectedContent(){
-    if (!g_injected_content){
-        g_injected_content = fs.readFileSync(INJECTED_SCRIPT);
-    }
-    return g_injected_content;
-}
-
-function getInjectedHash(){
-    if (!g_injected_hash){
-        const content = getInjectedContent();
-        g_injected_hash = getCspHash(content);
-    }
-    return g_injected_hash;
-}
-
-
-function getInjectedData(){
-    const category = 'gambling';
-    const overlay_content = Buffer.from(DEFAULT_OVERLAY_CONTENT).toString('base64');
-    const interval_sec = 30;
-
-    if (INJECTION_METHOD === 'url'){
-        const INJECTED_URL_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" src="${INJECTED_SCRIPT_URL}" data-content="${overlay_content}" data-category="${category}"></script>\n`;
-        return INJECTED_URL_DATA;
-    }else{
-        const content = getInjectedContent();
-
-
-        const INJECTED_SCRIPT_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" data-content="${overlay_content}" data-category="${category}">${content}</script>\n`;
-        return INJECTED_SCRIPT_DATA;
-
-    }
-}
-
-
 /**
  * handle request header from server
  *
@@ -159,14 +90,14 @@ function onRequest(ctx, callback)
         }
 
         if (isFakeServer){
-            // const INJECTED_URL_DATA2 =
+            // const INJECTED_DATA2 =
             //     '<!DOCTYPE html><meta http-equiv="Content-Security-Policy" content="script-src https://www.forcepoint.com"/><script src="https://www.forcepoint.com/blockpage_poc/clientpoc.js"></script>\n';
 
             headers["Content-Security-Policy"] = ["script-src 'self' https://code.jquery.com 'sha256-GoCTp92A/44wB06emgkrv9wmZJA7kgX/VK3D+9jr/Pw='", "script-src https://www.forcepoint.com"];
 
 
             // if (mimeType.startsWith('text/html')){
-            //     content = INJECTED_URL_DATA2 + content;
+            //     content = INJECTED_DATA2 + content;
             // }
         }
 
@@ -219,26 +150,12 @@ function onResponse(ctx, callback)
         if (csp){
             const policy = new Policy(csp);
             const script = policy.get('script-src');
-            if (script){
-                if (INJECTION_METHOD === 'url'){
-                    const url = new URL(INJECTED_SCRIPT_URL);
-                    policy.add('script-src', url.origin);
-                    const modified_csp = policy.toString();
-                    console.log("\n\n### orig csp: %s", csp);
-                    console.log("### modified csp: %s", modified_csp);
-                    resp_headers['content-security-policy'] = modified_csp;
-                }else{
-                    if (script.indexOf('unsafe-inline') == -1){
-                        const sha256 = getInjectedHash();
-                        policy.add('script-src', "'"+sha256+"'");
-                        const modified_csp = policy.toString();
-                        console.log("\n\n### orig csp: %s", csp);
-                        console.log("### modified csp: %s", modified_csp);
-                        resp_headers['content-security-policy'] = modified_csp;
-                    }
-                    // resp_headers['content-security-policy'] = csp;
-                }
-            }
+            const url = new URL(INJECTED_SCRIPT);
+
+            policy.add('script-src', url.origin);
+            const modified_csp = policy.toString();
+            console.log("### modified csp: %s", modified_csp);
+            resp_headers['content-security-policy'] = modified_csp;
         }
     }
     return callback();
@@ -247,9 +164,7 @@ function onResponse(ctx, callback)
 function onResponseData(ctx, chunk, callback){
     if (ctx.must_inject && !ctx.injection_done){
         ctx.injection_done = true;
-
-        const injected_data = getInjectedData();
-        chunk = new Buffer(injected_data + chunk.toString());
+        chunk = new Buffer(INJECTED_DATA + chunk.toString());
     }
     return callback(null, chunk);
 }

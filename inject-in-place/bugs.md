@@ -1,8 +1,4 @@
 
-## edge
-
-browser suggestion list in url bar shows an overlay mask
-
 ## both
 
 ### video not stopped
