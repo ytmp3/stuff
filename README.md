@@ -54,7 +54,8 @@ There are also 2 possible variations on what to inject:
    3rd party server to host our injection script (eg amazon server...)
 
  - inject the full content of the javascript directly in the page,
-   this makes the page larger.
+   this makes the page larger. For info, injected script size=3.6kB
+   which is ~1% size of twitter/youtube html page.
 
 ### advantage of this approach
 
@@ -88,13 +89,14 @@ page (similar to the 'inject-in-place' approach)
 
 This prototype is the most advanced. It also demonstrates:
 
-- the use of user-defined html for the confirm popup
-- passing information to the page (e.g. category) and client-side
-  template rendering
-- csp modification to safely permit execution of injected script
-- confirm popup is in an iframe, so that user-defined css does not
+- the use of user-defined html content for the confirm popup
+- extra information passed to the page (e.g. category or timeout) and
+  client-side template rendering
+- csp header modification to safely permit execution of injected script
+- confirm popup opened in an iframe, so that user-defined css does not
   interfere with target page css
-
+- tested with firefox stable linux, chromium stable linux, IE11 and ms Edge
+- injected code minified (3.6kB)
 
 ### advantage of this approach
 
@@ -117,3 +119,27 @@ This prototype is the most advanced. It also demonstrates:
   problems with ms Edge and IE11. We could do without it if absolutely
   needed, but the code would become more complicated with browser
   specific logic.
+
+### install and start this demo
+
+requirement: nodejs v10.1.0
+
+steps:
+
+    $ cd inject-stop-page
+    $ npm install
+    $ npm start
+
+If ok, the following message appears:
+
+    Make sure your browser trusts this CA:
+    /data/mydocs/projects/blockpage/poc/inject-stop-page/.http-mitm-proxy/certs/ca.pem
+    Proxy running on port 8081
+
+Now you need to configure your browser to:
+- add the ca.pem to the list of authorized ca
+- configure the browser proxy to be your-host-or-ip:8081 for both http and https
+
+Now you can open any url and make sure the confirm page is displayed
+at opening and after timeout. If you navigate to another page of the
+same domain, the confirm page should not show up again.

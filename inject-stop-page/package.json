@@ -4,7 +4,7 @@
     "description": "",
     "main": "injected_page.js",
     "scripts": {
-        "start": "node mitm.js"
+        "start": "node ./node_modules/.bin/uglifyjs --compress --mangle -o ./fpbp.js -- ./fpbp-src.js  && node mitm.js"
     },
     "author": "",
     "license": "ISC",
