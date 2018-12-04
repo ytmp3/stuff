@@ -109,7 +109,7 @@ function getInjectedHash(){
 function getInjectedData(){
     const category = 'gambling';
     const overlay_content = Buffer.from(DEFAULT_OVERLAY_CONTENT).toString('base64');
-    const interval_sec = 30;
+    const interval_sec = 10;
 
     if (INJECTION_METHOD === 'url'){
         const INJECTED_URL_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" src="${INJECTED_SCRIPT_URL}" data-content="${overlay_content}" data-category="${category}"></script>\n`;

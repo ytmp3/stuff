@@ -15,7 +15,7 @@
 '    padding: 0;'+
 '    margin: 0;'+
 '    border: 0;'+
-'    background-color: rgba(80,0,0,0.90);'+
+'    background-color: rgba(80,80,80,0.90);'+
 '}'+
 ''+
 '#__fp_overlay .outer {' +
@@ -70,8 +70,8 @@
 ;
 
 
-    // by default prompt again after 1 mn
-    var TIME_ALLOWED_SEC = 10;
+    // by default prompt again after 60 seconds
+    var TIME_ALLOWED_SEC = 60;
 
     // from https://gist.github.com/3277292
     function render_template(template, context){
@@ -88,16 +88,23 @@
         });
     }
 
-    /* return true if the current window is in an iframe
+    /*
+     * return true if the current window is in an iframe
      */
     function running_in_iframe() {
         try {
             return window.self !== window.top;
-        } catch (e) {
+        } catch (e){
             return true;
         }
+        return false;
     }
 
+    /**
+     * find all the media element on the page and pause them
+     *
+     * @param type - "audio" or "video"
+     */
     function pause_media(type){
         var media = document.querySelectorAll(type);
         if (!media){return;}
@@ -109,7 +116,13 @@
         }
     }
 
-
+    /**
+     * return 'data' attribute of the injected 'script' element.
+     *
+     * e.g. to obtain "data-content":
+     *
+     * data_content = get_data("content")
+     */
     function get_data(key){
         var fpscript = document.getElementById('__fp_bp_is');
         if (!fpscript){return null;}
@@ -117,7 +130,18 @@
         return fpscript.dataset[key];
     }
 
-
+    /**
+     * expand the variables in the template using the 'data' attribute
+     * of the injected 'script' element.
+     *
+     * Syntax is similar to handlebar, e.g.
+     * {{myvar}}
+     *
+     * @param template - string containing the template (obtained from
+     * "data-content")
+     *
+     * @return string containing the expanded template
+     */
     function expand_template_with_dataset(template){
         var fpscript = document.getElementById('__fp_bp_is');
         if (!fpscript){return template;}
@@ -126,6 +150,12 @@
         return res;
     }
 
+    /**
+     * get the html template for the popup. If the injected 'script'
+     * element has a "data-content" attribute, it must contain a
+     * base64 string containing an html document.
+     * Else, the DEFAULT_OVERLAY_CONTENT is used.
+     */
     function get_overlay_content(){
         var overlay_content = get_data('content');
         if (overlay_content){
@@ -135,8 +165,10 @@
     }
 
     /**
-     * return the time the user is allowed to brows in msec. This
-     * information is passed as a dom attribute during script injection
+     * return the time the user is allowed to brows in milliseconds.
+     *
+     * This information is passed as a dom attribute during script
+     * injection as "data-interval_sec"
      */
     function get_time_allowed_msec(){
         var fpscript = document.getElementById('__fp_bp_is');
@@ -153,18 +185,31 @@
         return interval_msec;
     }
 
-
+    /**
+     * event handler called when timer expired. It shows the popup
+     * again and stops the video and audio on the page. The timer is
+     * not restarted immediately. It will be restarted when the user
+     * clicks on the consent button.
+     */
     function on_overlay_timer_expired(){
         console.log("overlay timer expired");
         show_overlay();
     }
 
+    /**
+     * This function resets the start date of the timer in local
+     * storage (this value is used to know if it is necessary to
+     * redisplay the overlay when the page is reloaded). This reset
+     * operation is performed when the consent button is clicked (see
+     * on_overlay_button_clicked)
+     */
     function reset_overlay_timer(){
         localStorage.__fp_overlay_last_ = Date.now(); // msec
     }
 
     /*
-     * if restart is true, reinitialize the timer
+     * start the overlay timer, based on the time saved in local
+     * storage
      */
     function start_overlay_timer(){
         var interval_msec = get_time_allowed_msec();
@@ -176,11 +221,19 @@
         setTimeout(on_overlay_timer_expired, remainingMsec);
     }
 
-
+    /**
+     * event handler called when the user does not wish to continue
+     * and presses the 'back' button of the popup. We simply go back
+     * to the page we came from, if any.
+     */
     function on_overlay_button_back(){
         window.history.back();
     }
 
+    /**
+     * event handler called when the user wishes to continue.  this
+     * function hides the overlay and restart the timer.
+     */
     function on_overlay_button_clicked(){
         hide_overlay();
         reset_overlay_timer();
@@ -193,13 +246,19 @@
         }
     }
 
-    function fragmentFromString(strHTML) {
+    /* creates a document fragment from a string */
+    function fragmentFromString(strHTML){
         return document.createRange().createContextualFragment(strHTML);
     }
 
     /**
-     * insert the html/css to display the overlay at the beginning of the
-     * page
+     * insert the html/css to display the overlay at the beginning of
+     * the page. The html that is inserted remains in place even after
+     * the user clicks on the consent button, in case we need to show
+     * the popup again once the timer is expired.
+     *
+     * this function uses an iframe to isolate the css of the overlay
+     * popup from the css of the main page.
      */
     function insert_overlay(){
         var overlay_frag = fragmentFromString(overlay);
@@ -248,6 +307,10 @@
         return w=="none"? false: true;
     }
 
+    /**
+     * shows the overlay and pause the video and audio currently
+     * playing on the page.
+     */
     function show_overlay(){
         try{
             pause_media("audio");
@@ -300,6 +363,16 @@
         return false;
     }
 
+    /**
+     * entry point of this module. Note that the code is executed
+     * immediately.
+     *
+     * We do not wait for the page to load, so we are
+     * able to stop the loading process to display the overlay, which
+     * limits the side-effects of the page loading in the background
+     * (such as audio starting to play, notifications popup appearing,
+     * RGPD consent popup and so on...)
+     */
     function main(){
         if (running_in_iframe()){
             console.log("in iframe...ignoring");
