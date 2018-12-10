@@ -1,6 +1,6 @@
 (function(){
 
-    var overlay = '<style type="text/css">' +
+    var overlay_html = '<style type="text/css">' +
 '#__fp_overlay * {'+
 '    box-sizing: border-box;'+
 '}'+
@@ -15,7 +15,7 @@
 '    padding: 0;'+
 '    margin: 0;'+
 '    border: 0;'+
-'    background-color: rgba(80,80,80,0.90);'+
+'    background-color: rgba(30,30,30,0.90);'+
 '}'+
 ''+
 '#__fp_overlay .outer {' +
@@ -70,10 +70,19 @@
 ;
 
 
-    // by default prompt again after 60 seconds
+    // by default prompt again after n seconds
     var TIME_ALLOWED_SEC = 60;
 
-    // from https://gist.github.com/3277292
+    /**
+     * mini template engine. expand variables. eg {{foo}}
+     *
+     * from https://gist.github.com/3277292
+     *
+     * @param template html string with template variables
+     * @param context dict containing the variables to replace
+     *
+     * @return expanded template string
+     */
     function render_template(template, context){
         return template.replace(/{{\s*([a-zA-z0-9_.]+)\s*}}/gm, function(m, key){
             var value;
@@ -81,7 +90,8 @@
             var subkeys = key.split('.');
 
             for (var i in subkeys) {
-                value = source.hasOwnProperty(subkeys[i]) ? source[subkeys[i]] : '';
+                value = source.hasOwnProperty(subkeys[i]) ?
+                    source[subkeys[i]] : '';
                 source = value;
             }
             return value;
@@ -98,6 +108,14 @@
             return true;
         }
         return false;
+    }
+
+    /* creates a document fragment from a string
+     *
+     * @return instance of DocumentFragment
+     */
+    function fragmentFromString(strHTML){
+        return document.createRange().createContextualFragment(strHTML);
     }
 
     /**
@@ -117,17 +135,31 @@
     }
 
     /**
-     * return 'data' attribute of the injected 'script' element.
+     * return 'data' attribute of the injected 'script' element or
+     * null if no data attribute found
      *
-     * e.g. to obtain "data-content":
+     * e.g. to obtain "data-category":
      *
-     * data_content = get_data("content")
+     * <script data-category="social"...
+     * data_content = get_data("category")
+     *
+     * list of data attributes:
+     * - content: user-defined html document for the popup
+     * - category: identify the matched category
+     * - interval_sec: interval in seconds before showing the popup again
+
+     * - shared_domain_url: url to serve the hidden iframe used to
+         have a cross-domain browser storage.
      */
     function get_data(key){
         var fpscript = document.getElementById('__fp_bp_is');
         if (!fpscript){return null;}
 
         return fpscript.dataset[key];
+    }
+
+    function get_category(){
+        return get_data("category");
     }
 
     /**
@@ -196,6 +228,14 @@
         show_overlay();
     }
 
+    function get_storage_value(category, key){
+        var category_name = get_data("category");
+        var shared_domain_url = get_data("shared_domain_url");
+        if (category_name==null || shared_domain_url==null ){
+
+        }
+    }
+
     /**
      * This function resets the start date of the timer in local
      * storage (this value is used to know if it is necessary to
@@ -220,6 +260,7 @@
         console.log("overlay timer started (msec): ", remainingMsec);
         setTimeout(on_overlay_timer_expired, remainingMsec);
     }
+
 
     /**
      * event handler called when the user does not wish to continue
@@ -246,9 +287,78 @@
         }
     }
 
-    /* creates a document fragment from a string */
-    function fragmentFromString(strHTML){
-        return document.createRange().createContextualFragment(strHTML);
+
+    /**
+     * see insert_overlay()
+     * @return true on success
+     */
+    function _do_insert_overlay(){
+        var content_doc = null;
+        var overlay_iframe = null;
+        var overlay_frag = fragmentFromString(overlay_html);
+
+        var insertedNode = document.body.insertBefore(overlay_frag,
+                                                      document.body.firstChild);
+        overlay_iframe = document.getElementById("__fp_overlay_iframe");
+
+        if (!overlay_iframe){
+            console.error("Error in insert_overlay: "+
+                          "unable to access overlay_iframe");
+            return false;
+        }
+
+        if (overlay_iframe.contentDocument){
+            content_doc = overlay_iframe.contentDocument;
+        }else if (overlay_iframe.contentWindow){
+            content_doc = overlay_iframe.contentWindow.document;
+        }
+
+        if (!content_doc){
+            console.error("Error in insert_overlay: "+
+                          "unable to access contentDocument iframe");
+            return false;
+        }
+
+        var overlay_content_template = get_overlay_content();
+        var overlay_content =
+            expand_template_with_dataset(overlay_content_template);
+        if (!overlay_content){
+            console.error("Error in insert_overlay: "+
+                          "unable to get overlay content");
+            return false;
+        }
+
+        content_doc.open();
+        content_doc.write(overlay_content);
+        content_doc.close();
+
+        var overlay_allow_button =
+            content_doc.getElementById("__fp_overlay_allow");
+
+        if (overlay_allow_button==null){
+            console.error("Unable to find '__fp_overlay_allow id' button in html");
+            return false;
+        }
+        overlay_allow_button.addEventListener("click", on_overlay_button_clicked);
+
+        var overlay_back_button =
+            content_doc.getElementById("__fp_overlay_back");
+
+        // allow button optional
+        if (overlay_allow_button){
+            overlay_back_button.addEventListener("click", on_overlay_button_back);
+        }
+        return true;
+    }
+
+
+    function get_overlay(){
+        var overlay = document.getElementById("__fp_overlay");
+        return overlay;
+    }
+    function remove_overlay(){
+        var overlay = get_overlay();
+        overlay.parentNode.removeChild(overlay);
     }
 
     /**
@@ -259,40 +369,16 @@
      *
      * this function uses an iframe to isolate the css of the overlay
      * popup from the css of the main page.
+
+     * @return __dp_overlay element on success or null
      */
     function insert_overlay(){
-        var overlay_frag = fragmentFromString(overlay);
-        document.body.insertBefore(overlay_frag, document.body.firstChild);
-
-        var overlay_iframe = document.getElementById("__fp_overlay_iframe");
-
-        var content_doc = null;
-
-        if (overlay_iframe.contentDocument){
-            content_doc = overlay_iframe.contentDocument;
-        }else if (overlay_iframe.contentWindow){
-            content_doc = overlay_iframe.contentWindow.document;
-        }
-        else{
-            console.log("Error in insert_overlay: "+
-                        "unable to access contentDocument iframe");
-            return;
+        if (!_do_insert_overlay()){
+            remove_overlay();
+            return null;
         }
 
-        var overlay_content_template = get_overlay_content();
-        var overlay_content =
-            expand_template_with_dataset(overlay_content_template);
-
-        content_doc.open();
-        content_doc.write(overlay_content);
-        content_doc.close();
-
-        var overlay_allow_button =
-            content_doc.getElementById("__fp_overlay_allow");
-        overlay_allow_button.addEventListener("click", on_overlay_button_clicked);
-        var overlay_back_button =
-            content_doc.getElementById("__fp_overlay_back");
-        overlay_back_button.addEventListener("click", on_overlay_button_back);
+        return get_overlay();
     }
 
     /**
@@ -312,6 +398,18 @@
      * playing on the page.
      */
     function show_overlay(){
+        var overlay = get_overlay();
+        if (!overlay){
+            overlay = insert_overlay();
+        }
+        if (!overlay){
+            console.error("Unable to get overlay. blockpage feature disabled");
+            return;
+        }
+
+        overlay.style.width = "100%";
+        overlay.style.display="block";
+
         try{
             pause_media("audio");
             pause_media("video");
@@ -319,21 +417,17 @@
             console.log("show_overlay: pause_media error (ignored)", e);
         }
 
-        var overlay = document.getElementById("__fp_overlay");
-        if (!overlay){
-            insert_overlay();
-            overlay = document.getElementById("__fp_overlay");
-        }
-        overlay.style.width = "100%";
-        overlay.style.display="block";
-
         if (overlay.showModal){
             overlay.showModal();
         }
     }
 
     function hide_overlay(){
-        var overlay = document.getElementById("__fp_overlay");
+        var overlay = get_overlay();
+        if (!overlay){
+            return;
+        }
+
         if (overlay.close){
             overlay.close();
         }
@@ -402,6 +496,12 @@
         }
     }
 
+    var categ = get_data("ouf");
+    if (categ == null){
+        console.log("ouf");
+    }else{
+        console.log("category=%s", categ);
+    }
     main();
 
 })();

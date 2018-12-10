@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const mime = require('mime');
 const Proxy = require('http-mitm-proxy');
 
+const process = require('process');
 const fs = require('fs');
 const net = require('net');
 const http = require('http');
@@ -34,8 +35,15 @@ const INJECTION_METHOD = 'content';
 // const INJECTED_SCRIPT_URL = "https://s3.eu-central-1.amazonaws.com/forcepoint-ngfw-web/clientpoc.js";
 const INJECTED_SCRIPT_URL = "https://www.forcepoint.com/blockpage_poc/fpbp.js";
 
-const INJECTED_SCRIPT = __dirname + "/fpbp.js";
+const inDevelopmentMode = (process.env.Node_ENV === "development");
 
+// set the following variable to inject the src script instead of the
+// uglified one:
+// export Node_ENV=development
+const INJECTED_SCRIPT = __dirname +
+      (inDevelopmentMode ? "/fpbp-src.js" : "/fpbp.js");
+
+console.log("Injecting %s", INJECTED_SCRIPT);
 
 var g_injected_content = null;
 var g_injected_hash = null;
