@@ -14,6 +14,8 @@ const ENABLE_INJECTION = true;
 const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
 
+const SHARED_STORE_IFRAME_URL = "https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html";
+
 const DEFAULT_OVERLAY_CONTENT = `
 <html>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -124,9 +126,7 @@ function getInjectedData(){
         return INJECTED_URL_DATA;
     }else{
         const content = getInjectedContent();
-
-
-        const INJECTED_SCRIPT_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" data-content="${overlay_content}" data-category="${category}">${content}</script>\n`;
+        const INJECTED_SCRIPT_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" data-content="${overlay_content}" data-category="${category}" data-shared_store_url="${SHARED_STORE_IFRAME_URL}">${content}</script>\n`;
         return INJECTED_SCRIPT_DATA;
 
     }
@@ -160,6 +160,7 @@ function onRequest(ctx, callback)
         let responseCode = 200;
         let content = "";
         try{
+            console.log("reading file '%s'", fname);
             content = fs.readFileSync(fname);
         } catch (err) {
             responseCode = 404;

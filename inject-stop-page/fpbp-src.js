@@ -18,19 +18,19 @@
 '    background-color: rgba(30,30,30,0.90);'+
 '}'+
 ''+
-'#__fp_overlay .outer {' +
+'#__fp_overlay .__fp_outer {' +
 '  display: table;' +
 '  position: absolute;overflow: none;' +
 '  height: 100%;' +
 '  width: 100%;' +
 '}' +
 '' +
-'#__fp_overlay .middle {' +
+'#__fp_overlay .__fp_middle {' +
 '  display: table-cell;' +
 '  vertical-align: middle;' +
 '}' +
 '' +
-'#__fp_overlay .inner {' +
+'#__fp_overlay .__fp_inner {' +
 '  margin-left: auto;' +
 '  margin-right: auto;' +
 '  padding: 10px;' +
@@ -45,13 +45,13 @@
 '</style>'+
 ''+
 '<dialog id="__fp_overlay" >'+
-'<div class="outer">' +
-'  <div class="middle">' +
-'  <div class="inner">' +
-'    <iframe  id="__fp_overlay_iframe" src="javascript:null"></iframe>'+
+'  <div class="__fp_outer">' +
+'    <div class="__fp_middle">' +
+'      <div class="__fp_inner">' +
+'        <iframe  id="__fp_overlay_iframe" src="javascript:null"></iframe>'+
+'      </div>' +
+'    </div>' +
 '  </div>' +
-'  </div>' +
-'</div>' +
 '</dialog>';
 
 
@@ -73,8 +73,10 @@
     // by default prompt again after n seconds
     var TIME_ALLOWED_SEC = 60;
 
+
     /**
-     * mini template engine. expand variables. eg {{foo}}
+     * mini template engine. expand variables with 'handlebar'
+     * syntax. eg {{myvar}}
      *
      * from https://gist.github.com/3277292
      *
@@ -128,7 +130,7 @@
         if (!media){return;}
         for (var i=0;i<media.length; i++){
             var v = media[i];
-            if (v.pause){
+            if (v && v.pause){
                 v.pause();
             }
         }
@@ -151,15 +153,15 @@
      * - shared_domain_url: url to serve the hidden iframe used to
          have a cross-domain browser storage.
      */
-    function get_data(key){
+    function get_data(key, default_value=null){
         var fpscript = document.getElementById('__fp_bp_is');
         if (!fpscript){return null;}
 
-        return fpscript.dataset[key];
+        return fpscript.dataset[key] || default_value;
     }
 
     function get_category(){
-        return get_data("category");
+        return get_data("category", "default_category");
     }
 
     /**
@@ -174,7 +176,7 @@
      *
      * @return string containing the expanded template
      */
-    function expand_template_with_dataset(template){
+    function render_popup_template(template){
         var fpscript = document.getElementById('__fp_bp_is');
         if (!fpscript){return template;}
 
@@ -236,27 +238,15 @@
         }
     }
 
-    /**
-     * This function resets the start date of the timer in local
-     * storage (this value is used to know if it is necessary to
-     * redisplay the overlay when the page is reloaded). This reset
-     * operation is performed when the consent button is clicked (see
-     * on_overlay_button_clicked)
-     */
-    function reset_overlay_timer(){
-        localStorage.__fp_overlay_last_ = Date.now(); // msec
-    }
 
     /*
      * start the overlay timer, based on the time saved in local
      * storage
      */
-    function start_overlay_timer(){
+    function start_overlay_timer(overlay_timer_msec){
         var interval_msec = get_time_allowed_msec();
 
-        var remainingMsec = interval_msec -
-            (Date.now() - localStorage.__fp_overlay_last_);
-
+        var remainingMsec = interval_msec - (Date.now() - overlay_timer_msec);
         console.log("overlay timer started (msec): ", remainingMsec);
         setTimeout(on_overlay_timer_expired, remainingMsec);
     }
@@ -277,13 +267,15 @@
      */
     function on_overlay_button_clicked(){
         hide_overlay();
-        reset_overlay_timer();
+
+        var now_msec = Date.now();
+        set_overlay_timer(now_msec);
 
         if (window.__fp_initial){
             window.location.reload();
             window.__fp_initial = false;
         }else{
-            start_overlay_timer();
+            start_overlay_timer(now_msec);
         }
     }
 
@@ -321,7 +313,7 @@
 
         var overlay_content_template = get_overlay_content();
         var overlay_content =
-            expand_template_with_dataset(overlay_content_template);
+            render_popup_template(overlay_content_template);
         if (!overlay_content){
             console.error("Error in insert_overlay: "+
                           "unable to get overlay content");
@@ -438,15 +430,15 @@
      * check if the overlay has been previously displayed and if the
      * allowed time is not elapsed
      */
-    function is_overlay_needed(){
+    function is_overlay_needed(overlay_timer_msec){
         // never displayed => needed
-        if (!localStorage.__fp_overlay_last_){
+        if (!overlay_timer_msec){
             console.log("overlay needed (never displayed before)");
             return true;
         }
 
         // allotted time passed => needed
-        var elapsed_msec = Date.now() - localStorage.__fp_overlay_last_;
+        var elapsed_msec = Date.now() - overlay_timer_msec;
         var interval_msec = get_time_allowed_msec();
 
         if (elapsed_msec > interval_msec){
@@ -456,6 +448,23 @@
 
         return false;
     }
+
+
+    function set_overlay_timer(value_msec){
+        var category_name = get_category();
+
+        var timer_name = "__fp_" + category_name + "_timer_msec";
+        localStorage[timer_name] = value_msec;
+    }
+
+    function get_overlay_timer(handle_response){
+        var category_name = get_category();
+        var timer_name = "__fp_" + category_name + "_timer_msec";
+        var overlay_timer_msec = localStorage[timer_name];
+        handle_response(overlay_timer_msec);
+    }
+
+
 
     /**
      * entry point of this module. Note that the code is executed
@@ -479,29 +488,23 @@
         }
         window.__fp_js_injected_ = true;
 
-        if (!is_overlay_needed()){
-            start_overlay_timer();
-            return;
-        }
-
-        window.__fp_initial = true;
-        var body = document.createElement("body");
-        document.documentElement.appendChild(body);
-        show_overlay();
-        if (window.stop){
-            window.stop();
-        }else{
-            // MSIE
-            document.execCommand("Stop");
-        }
+        get_overlay_timer(function(overlay_timer_msec){
+            if (is_overlay_needed(overlay_timer_msec)){
+                window.__fp_initial = true;
+                var body = document.createElement("body");
+                document.documentElement.appendChild(body);
+                show_overlay();
+                if (window.stop){
+                    window.stop();
+                }else /*MSIE*/{
+                    document.execCommand("Stop");
+                }
+            }else{
+                start_overlay_timer(overlay_timer_msec);
+            }
+        });
     }
 
-    var categ = get_data("ouf");
-    if (categ == null){
-        console.log("ouf");
-    }else{
-        console.log("category=%s", categ);
-    }
     main();
 
 })();
