@@ -140,8 +140,12 @@ function getInjectedData(){
 function onRequest(ctx, callback)
 {
     const host = ctx.clientToProxyRequest.headers["host"];
-
     const fullUrl = '//' + host + ctx.clientToProxyRequest.url;
+
+    if ("x-fp-bp-no-inject" in ctx.clientToProxyRequest.headers){
+        console.log("!!!!!!!!!!!!!! got NO INJECT for %s", fullUrl);
+    }
+
     // console.log("onRequest: ", fullUrl);
 
     const isFakeServer = fullUrl.startsWith("//www.example.com");

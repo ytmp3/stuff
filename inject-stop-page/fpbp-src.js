@@ -154,15 +154,14 @@
      * - shared_domain_url: url to serve the hidden iframe used to
          have a cross-domain browser storage.
      */
-    function get_data(key, default_value=null){
+    function get_data(key){
         var fpscript = document.getElementById('__fp_bp_is');
         if (!fpscript){return null;}
-
-        return fpscript.dataset[key] || default_value;
+        return fpscript.dataset[key];
     }
 
     function get_category(){
-        return get_data("category", "default_category");
+        var categ = get_data("category") || "default_category";
     }
 
     /**
@@ -507,6 +506,15 @@
     }
 
 
+    function installXHRHook(){
+        var XMLHttpRequest_orig = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.send = function(){
+            this.setRequestHeader("X-FP-BP-NO-INJECT", "1");
+            return XMLHttpRequest_orig.apply(this, arguments);
+        };
+    }
+
+
     /**
      * entry point of this module. Note that the code is executed
      * immediately.
@@ -518,6 +526,8 @@
      * RGPD consent popup and so on...)
      */
     function main(){
+        installXHRHook();
+
         if (running_in_iframe()){
             console.log("in iframe...ignoring");
             return;
