@@ -55,6 +55,7 @@
 '</dialog>';
 
 
+    var SHIF ='<iframe  id="__fp_shif" src="https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html"></iframe>';
 
     var DEFAULT_OVERLAY_CONTENT =
 '<html>' +
@@ -343,11 +344,11 @@
         return true;
     }
 
-
     function get_overlay(){
         var overlay = document.getElementById("__fp_overlay");
         return overlay;
     }
+
     function remove_overlay(){
         var overlay = get_overlay();
         overlay.parentNode.removeChild(overlay);
@@ -449,21 +450,61 @@
         return false;
     }
 
+    function get_shared_domain_iframe(url){
+        var shared_domain_iframe = document.getElementById("__fp_shif");
+        if (!shared_domain_iframe){
+            shared_domain_iframe = document.createElement("iframe");
+            shared_domain_iframe.setAttribute("src", url);
+            shared_domain_iframe.width = "200px";
+            shared_domain_iframe.height =  "200px";
+            shared_domain_iframe.id = "__fp_shif";
+            document.documentElement.appendChild(shared_domain_iframe);
+
+        }
+        return shared_domain_iframe;
+    }
 
     function set_overlay_timer(value_msec){
         var category_name = get_category();
+        // var shared_domain_url = get_data("shared_domain_url");
+        var shared_domain_url=null;
 
-        var timer_name = "__fp_" + category_name + "_timer_msec";
-        localStorage[timer_name] = value_msec;
+        if (shared_domain_url){
+            var shared_domain_iframe = get_shared_domain_iframe(shared_domain_url);
+            var iframe_window = shared_domain_iframe.contentWindow;
+
+            iframe_window.postMessage(
+                {op:'set_overlay_timer', category: category_name,
+                 value_msec: value_msec}, '*');
+
+        }else{
+            var timer_name = "__fp_" + category_name + "_timer_msec";
+            localStorage[timer_name] = value_msec;
+        }
     }
 
     function get_overlay_timer(handle_response){
         var category_name = get_category();
-        var timer_name = "__fp_" + category_name + "_timer_msec";
-        var overlay_timer_msec = localStorage[timer_name];
-        handle_response(overlay_timer_msec);
-    }
 
+        // var shared_domain_url = get_data("shared_domain_url");
+        var shared_domain_url = null;
+
+        if (shared_domain_url){
+            var shared_domain_iframe = get_shared_domain_iframe(shared_domain_url);
+            var iframe_window = shared_domain_iframe.contentWindow;
+
+            iframe_window.postMessage(
+                {op:'get_overlay_timer', category: category_name}, '*');
+            iframe_window.addEventListener('message', function(e){
+                console.log("parent got message: ", e);
+            });
+
+        }else{
+            var timer_name = "__fp_" + category_name + "_timer_msec";
+            var overlay_timer_msec = localStorage[timer_name];
+            handle_response(overlay_timer_msec);
+        }
+    }
 
 
     /**
@@ -487,6 +528,8 @@
             return;
         }
         window.__fp_js_injected_ = true;
+        // var body = document.createElement("body");
+        // document.documentElement.appendChild(body);
 
         get_overlay_timer(function(overlay_timer_msec){
             if (is_overlay_needed(overlay_timer_msec)){

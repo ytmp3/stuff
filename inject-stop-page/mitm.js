@@ -126,7 +126,7 @@ function getInjectedData(){
         return INJECTED_URL_DATA;
     }else{
         const content = getInjectedContent();
-        const INJECTED_SCRIPT_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" data-content="${overlay_content}" data-category="${category}" data-shared_store_url="${SHARED_STORE_IFRAME_URL}">${content}</script>\n`;
+        const INJECTED_SCRIPT_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" data-content="${overlay_content}" data-category="${category}" data-shared_domain_url="${SHARED_STORE_IFRAME_URL}">${content}</script>\n`;
         return INJECTED_SCRIPT_DATA;
 
     }
