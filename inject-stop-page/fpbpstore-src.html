@@ -1,0 +1,24 @@
+<html>
+  <meta charset="utf-8"/>
+  <head>
+    <script>
+      console.log("before onLoad");
+      alert("!!!");
+      window.onload = function() {
+          console.log("cross-domain-store loaded");
+          function receiveMessage(e) {
+              console.log("iframe got message: ", e);
+              if (!localStorage._count){
+                  localStorage._count = 0;
+              }else{
+                  localStorage._count++;
+              }
+              console.log("count is: ", localStorage._count);
+              window.parent.postMessage('iframe_message: '+ localStorage._count, e.origin);
+          }
+          window.addEventListener('message', receiveMessage);
+      }
+    </script>
+  </head>
+  <body>Hello iframe</body>
+</html>
