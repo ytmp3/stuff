@@ -1,5 +1,9 @@
 (function(){
 
+
+var worker;
+
+
     var overlay_html = '<style type="text/css">' +
 '#__fp_overlay * {'+
 '    box-sizing: border-box;'+
@@ -505,13 +509,47 @@
         }
     }
 
+    /*
+       this function installs hooks to intercept XHR/fetch and add a
+       custom header to inform the server that no injection should be
+       made on this request.
 
-    function installXHRHook(){
+       todo:
+       is it possible to hook XMLHttpRequest and fetch for service
+       workers and web workers ?
+
+       note that for CORS and XMLHttpRequest (probably also fetch), if
+       a preflight request is needed, the middleman server must remove
+       our extra header from the Access-Control-Request-Headers of
+       OPTION messages.
+     */
+
+    /*
+      todo need to add extra header only for GET
+     */
+    function installHooks(){
+        // XHR
         var XMLHttpRequest_orig = XMLHttpRequest.prototype.send;
         XMLHttpRequest.prototype.send = function(){
             this.setRequestHeader("X-FP-BP-NO-INJECT", "1");
             return XMLHttpRequest_orig.apply(this, arguments);
         };
+
+        // fetch
+        if (window.fetch){
+            var fetch_orig = window.fetch;
+            window.fetch = function() {
+                if (arguments.length == 1){
+                    [].push.call(arguments, {});
+                }
+                var options = arguments[1];
+                if (!("headers" in options)){
+                    options.headers = new Headers();
+                }
+                options.headers.append("X-FP-BP-NO-INJECT", "1");
+                return fetch_orig.apply(this, arguments);
+            };
+        }
     }
 
 
@@ -526,7 +564,7 @@
      * RGPD consent popup and so on...)
      */
     function main(){
-        installXHRHook();
+        installHooks();
 
         if (running_in_iframe()){
             console.log("in iframe...ignoring");

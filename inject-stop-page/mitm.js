@@ -14,6 +14,11 @@ const ENABLE_INJECTION = true;
 const ENABLE_COMPRESSION = false;
 const PROXY_PORT = 8081;
 
+
+const DEFAULT_CATEGORY='gambling';
+const DEFAULT_INTERVAL_SEC=60;
+
+
 const SHARED_STORE_IFRAME_URL = "https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html";
 
 const DEFAULT_OVERLAY_CONTENT = `
@@ -117,9 +122,9 @@ function getInjectedHash(){
 
 
 function getInjectedData(){
-    const category = 'gambling';
+    const category = DEFAULT_CATEGORY;
     const overlay_content = Buffer.from(DEFAULT_OVERLAY_CONTENT).toString('base64');
-    const interval_sec = 10;
+    const interval_sec = DEFAULT_INTERVAL_SEC;
 
     if (INJECTION_METHOD === 'url'){
         const INJECTED_URL_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" src="${INJECTED_SCRIPT_URL}" data-content="${overlay_content}" data-category="${category}"></script>\n`;
@@ -139,11 +144,26 @@ function getInjectedData(){
  */
 function onRequest(ctx, callback)
 {
-    const host = ctx.clientToProxyRequest.headers["host"];
+    const headers = ctx.clientToProxyRequest.headers;
+    const host = headers["host"];
     const fullUrl = '//' + host + ctx.clientToProxyRequest.url;
 
-    if ("x-fp-bp-no-inject" in ctx.clientToProxyRequest.headers){
-        console.log("!!!!!!!!!!!!!! got NO INJECT for %s", fullUrl);
+
+    if ("x-fp-bp-no-inject" in headers){
+        console.log("!!!!!!!!!!!!!! found NO INJECT for %s", fullUrl);
+        delete headers["x-fp-bp-no-inject"];
+    }
+
+    if ("access-control-request-headers" in headers){
+        const acl_hdr = headers["access-control-request-headers"];
+        console.log("found access-control-request-headers: %s", acl_hdr);
+
+        const new_acl_hdr = acl_hdr.split(/,\s*/).
+              filter( (e, i)=>{ return e!=="x-fp-bp-no-inject"; }).
+              join(",");
+
+        headers["access-control-request-headers"] = new_acl_hdr;
+        console.log("rewrite access-control-request-headers: %s", new_acl_hdr);
     }
 
     // console.log("onRequest: ", fullUrl);
@@ -157,7 +177,8 @@ function onRequest(ctx, callback)
         const mimeType = mime.getType(ext);
 
         const headers = {
-            'Content-Type': mimeType
+            'Content-Type': mimeType,
+            'Access-Control-Allow-Origin': '*'
         };
 
 
@@ -215,6 +236,17 @@ function onResponse(ctx, callback)
      * certificates for that site from going unnoticed.
      */
     delete resp_headers['expect-ct'];
+
+    // for cors
+    if ('access-control-allow-origin' in resp_headers){
+        if ('access-control-allow-headers' in resp_headers){
+            resp_headers['access-control-allow-headers'] += ",x-fp-bp-no-inject";
+        }else{
+            resp_headers['access-control-allow-headers'] = "x-fp-bp-no-inject";
+        }
+        console.log("fix cors acl hdr: %s", resp_headers['access-control-allow-headers']);
+    }
+
 
     // note: headers converted to lowercase by nodejs
     const is_html = 'content-type' in resp_headers &&
