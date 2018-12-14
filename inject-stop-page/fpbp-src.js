@@ -521,7 +521,7 @@ var worker;
        note that for CORS and XMLHttpRequest (probably also fetch), if
        a preflight request is needed, the middleman server must remove
        our extra header from the Access-Control-Request-Headers of
-       OPTION messages.
+       'OPTIONS' request and add them in the 'OPTIONS' response
      */
 
     /*
@@ -529,10 +529,19 @@ var worker;
      */
     function installHooks(){
         // XHR
-        var XMLHttpRequest_orig = XMLHttpRequest.prototype.send;
+        var XMLHttpRequest_open_orig = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(){
+            var method = arguments[0];
+            this.__fp_must_inject = (method.toLowerCase() === 'get');
+            return XMLHttpRequest_open_orig.apply(this, arguments);
+        };
+
+        var XMLHttpRequest_send_orig = XMLHttpRequest.prototype.send;
         XMLHttpRequest.prototype.send = function(){
-            this.setRequestHeader("X-FP-BP-NO-INJECT", "1");
-            return XMLHttpRequest_orig.apply(this, arguments);
+            if (this.__fp_must_inject){
+                this.setRequestHeader("X-FP-BP-NO-INJECT", "1");
+            }
+            return XMLHttpRequest_send_orig.apply(this, arguments);
         };
 
         // fetch
