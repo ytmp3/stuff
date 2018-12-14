@@ -2,22 +2,35 @@
   <meta charset="utf-8"/>
   <head>
     <script>
-      console.log("before onLoad");
-      window.onload = function() {
+      // window.onload = function() {
           console.log("cross-domain-store loaded");
           function receiveMessage(e) {
               console.log("iframe got message: ", e);
-              if (!localStorage._count){
-                  localStorage._count = 0;
-              }else{
-                  localStorage._count++;
+              var category_name = e.data.category;
+              var timer_name = "__fp_" + category_name + "_timer_msec";
+
+              var op = e.data.op;
+
+              if (!(timer_name in localStorage)){
+                  localStorage[timer_name] = 0;
               }
-              console.log("count is: ", localStorage._count);
-              window.parent.postMessage('iframe_message: '+ localStorage._count, e.origin);
+              if (op === "get_overlay_timer"){
+                  var overlay_timer_msec = localStorage[timer_name];
+                  console.log("get timer %s: %d", timer_name, overlay_timer_msec);
+                  window.parent.postMessage({
+                      op: 'get_overlay_timer_resp', value_msec:overlay_timer_msec
+                  }, e.origin);
+              }
+              else if (op === "set_overlay_timer"){
+                  console.log("set timer %s: %d", timer_name, value_msec);
+                  var value_msec = e.data.value_msec;
+                  localStorage[timer_name] = value_msec;
+              }
+
           }
           window.addEventListener('message', receiveMessage);
-      }
+      // }
     </script>
   </head>
-  <body>Hello iframe</body>
+  <body></body>
 </html>

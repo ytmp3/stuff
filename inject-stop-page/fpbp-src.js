@@ -131,6 +131,7 @@ var worker;
      * @param type - "audio" or "video"
      */
     function pause_media(type){
+        console.log("pause_media %s", type);
         var media = document.querySelectorAll(type);
         if (!media){return;}
         for (var i=0;i<media.length; i++){
@@ -204,7 +205,7 @@ var worker;
     }
 
     /**
-     * return the time the user is allowed to brows in milliseconds.
+     * return the time the user is allowed to browse in milliseconds.
      *
      * This information is passed as a dom attribute during script
      * injection as "data-interval_sec"
@@ -218,7 +219,7 @@ var worker;
                 interval_sec = fpscript.dataset.interval_sec;
             }
         }
-        console.log("=> interval_sec=", interval_sec);
+        console.log("allowed interval_sec=", interval_sec);
 
         var interval_msec = (interval_sec * 1000);
         return interval_msec;
@@ -414,7 +415,7 @@ var worker;
             console.log("show_overlay: pause_media error (ignored)", e);
         }
 
-        if (overlay.showModal){
+        if (!overlay.open && overlay.showModal){
             overlay.showModal();
         }
     }
@@ -500,7 +501,11 @@ var worker;
             iframe_window.postMessage(
                 {op:'get_overlay_timer', category: category_name}, '*');
             window.addEventListener('message', function(e){
-                console.log("parent got message: ", e);
+                if (e.data.op && e.data.op === 'get_overlay_timer_resp'){
+                    console.log("parent receives get_overlay_timer_resp: ", e);
+                    var overlay_timer_msec = e.data.value_msec;
+                    handle_response(overlay_timer_msec);
+                }
             });
 
         }else{
