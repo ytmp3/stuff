@@ -524,22 +524,20 @@ var worker;
        'OPTIONS' request and add them in the 'OPTIONS' response
      */
 
-    /*
-      todo need to add extra header only for GET
-     */
     function installHooks(){
+        var CUSTOM_HDR_NAME="X-FP-BP-NO-INJECT";
         // XHR
         var XMLHttpRequest_open_orig = XMLHttpRequest.prototype.open;
         XMLHttpRequest.prototype.open = function(){
             var method = arguments[0];
-            this.__fp_must_inject = (method.toLowerCase() === 'get');
+            this.__fp_add_hdr = (method.toLowerCase() === 'get');
             return XMLHttpRequest_open_orig.apply(this, arguments);
         };
 
         var XMLHttpRequest_send_orig = XMLHttpRequest.prototype.send;
         XMLHttpRequest.prototype.send = function(){
-            if (this.__fp_must_inject){
-                this.setRequestHeader("X-FP-BP-NO-INJECT", "1");
+            if (this.__fp_add_hdr){
+                this.setRequestHeader(CUSTOM_HDR_NAME, "1");
             }
             return XMLHttpRequest_send_orig.apply(this, arguments);
         };
@@ -552,10 +550,18 @@ var worker;
                     [].push.call(arguments, {});
                 }
                 var options = arguments[1];
-                if (!("headers" in options)){
-                    options.headers = new Headers();
+                if (!("method" in options) ||
+                    options.method.toLowerCase()  === 'get'){
+
+                    if (!("headers" in options)){
+                        options.headers = new Headers();
+                    }
+                    if (options.headers.append){
+                        options.headers.append(CUSTOM_HDR_NAME, "1");
+                    }else{
+                        options.headers[CUSTOM_HDR_NAME] = "1";
+                    }
                 }
-                options.headers.append("X-FP-BP-NO-INJECT", "1");
                 return fetch_orig.apply(this, arguments);
             };
         }
