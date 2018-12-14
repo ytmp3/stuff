@@ -166,6 +166,7 @@ var worker;
 
     function get_category(){
         var categ = get_data("category") || "default_category";
+        return categ;
     }
 
     /**
@@ -458,8 +459,8 @@ var worker;
         if (!shared_domain_iframe){
             shared_domain_iframe = document.createElement("iframe");
             shared_domain_iframe.setAttribute("src", url);
-            shared_domain_iframe.width = "200px";
-            shared_domain_iframe.height =  "200px";
+            shared_domain_iframe.width = "10px";
+            shared_domain_iframe.height =  "10px";
             shared_domain_iframe.id = "__fp_shif";
             document.documentElement.appendChild(shared_domain_iframe);
 
@@ -469,8 +470,8 @@ var worker;
 
     function set_overlay_timer(value_msec){
         var category_name = get_category();
-        // var shared_domain_url = get_data("shared_domain_url");
-        var shared_domain_url=null;
+        var shared_domain_url = get_data("shared_domain_url");
+        // var shared_domain_url=null;
 
         if (shared_domain_url){
             var shared_domain_iframe = get_shared_domain_iframe(shared_domain_url);
@@ -489,8 +490,8 @@ var worker;
     function get_overlay_timer(handle_response){
         var category_name = get_category();
 
-        // var shared_domain_url = get_data("shared_domain_url");
-        var shared_domain_url = null;
+        var shared_domain_url = get_data("shared_domain_url");
+        // var shared_domain_url = null;
 
         if (shared_domain_url){
             var shared_domain_iframe = get_shared_domain_iframe(shared_domain_url);
@@ -498,7 +499,7 @@ var worker;
 
             iframe_window.postMessage(
                 {op:'get_overlay_timer', category: category_name}, '*');
-            iframe_window.addEventListener('message', function(e){
+            window.addEventListener('message', function(e){
                 console.log("parent got message: ", e);
             });
 
@@ -567,6 +568,30 @@ var worker;
         }
     }
 
+    function check_timer_show_overlay(){
+        console.log("in check_timer_show_overlay");
+        get_overlay_timer(function(overlay_timer_msec){
+            var has_shared_domain_url = get_data("shared_domain_url");
+            if (is_overlay_needed(overlay_timer_msec)){
+                window.__fp_initial = true;
+
+                var body = document.createElement("body");
+                document.documentElement.appendChild(body);
+                show_overlay();
+
+                if (! has_shared_domain_url){
+                    if (window.stop){
+                        window.stop();
+                    }else /*MSIE*/{
+                        document.execCommand("Stop");
+                    }
+                }
+
+            }else{
+                start_overlay_timer(overlay_timer_msec);
+            }
+        });
+    }
 
     /**
      * entry point of this module. Note that the code is executed
@@ -591,24 +616,14 @@ var worker;
             return;
         }
         window.__fp_js_injected_ = true;
-        // var body = document.createElement("body");
-        // document.documentElement.appendChild(body);
 
-        get_overlay_timer(function(overlay_timer_msec){
-            if (is_overlay_needed(overlay_timer_msec)){
-                window.__fp_initial = true;
-                var body = document.createElement("body");
-                document.documentElement.appendChild(body);
-                show_overlay();
-                if (window.stop){
-                    window.stop();
-                }else /*MSIE*/{
-                    document.execCommand("Stop");
-                }
-            }else{
-                start_overlay_timer(overlay_timer_msec);
-            }
-        });
+        var shared_domain_url = get_data("shared_domain_url");
+        if (shared_domain_url){
+            var shared_domain_iframe = get_shared_domain_iframe(shared_domain_url);
+            shared_domain_iframe.addEventListener("load", check_timer_show_overlay);
+        }else{
+            check_timer_show_overlay();
+        }
     }
 
     main();

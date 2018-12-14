@@ -106,9 +106,11 @@ function getCspHash(data){
 
 
 function getInjectedContent(){
-    if (!g_injected_content){
-        g_injected_content = fs.readFileSync(INJECTED_SCRIPT);
-    }
+    // if (!g_injected_content){
+    //     g_injected_content = fs.readFileSync(INJECTED_SCRIPT);
+    // }
+    // return g_injected_content;
+    g_injected_content = fs.readFileSync(INJECTED_SCRIPT);
     return g_injected_content;
 }
 
@@ -152,6 +154,7 @@ function onRequest(ctx, callback)
     if ("x-fp-bp-no-inject" in headers){
         console.log("!!!!!!!!!!!!!! found NO INJECT for %s", fullUrl);
         delete headers["x-fp-bp-no-inject"];
+        ctx.no_inject = true;
     }
 
     if ("access-control-request-headers" in headers){
@@ -237,7 +240,11 @@ function onResponse(ctx, callback)
      */
     delete resp_headers['expect-ct'];
 
-    // for cors
+    // for cors preflight response, note that this header can also be
+    // present even if this is not a preflight OPTIONS message and not
+    // event a cors (example regular request to
+    // https://www.wikipedia.org/), but I think this is safe to always add the
+    // access-control-allow-headers
     if ('access-control-allow-origin' in resp_headers){
         if ('access-control-allow-headers' in resp_headers){
             resp_headers['access-control-allow-headers'] += ",x-fp-bp-no-inject";
@@ -254,13 +261,17 @@ function onResponse(ctx, callback)
     const is_xhr = ('x-requested-with' in req_headers);
     const is_cors = ('origin' in req_headers);
 
-    ctx.must_inject = (ENABLE_INJECTION && is_html && !is_xhr && !is_cors);
+    ctx.must_inject = (ENABLE_INJECTION && is_html && !ctx.no_inject &&
+                       !is_xhr && !is_cors);
 
 
     if (ctx.must_inject)
     {
         delete resp_headers['content-length'];
         const csp = resp_headers['content-security-policy'];
+
+        delete resp_headers['etag'];
+        delete resp_headers['last-modified'];
         if (csp){
             const policy = new Policy(csp);
             const script = policy.get('script-src');

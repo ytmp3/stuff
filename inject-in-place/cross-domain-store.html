@@ -2,20 +2,14 @@
   <meta charset="utf-8"/>
   <head>
     <script>
-      window.onload = function() {
-      console.log("cross-domain-store loaded");
-      function receiveMessage(e) {
-      console.log("iframe got message: ", e);
-      if (!localStorage._count){
-      localStorage._count = 0;
-      }else{
-      localStorage._count++;
-      }
-      console.log("count is: ", localStorage._count);
-      window.parent.postMessage('iframe_message: '+ localStorage._count, e.origin);
-	}
-	window.addEventListener('message', receiveMessage);
-}
+      // window.onload = function() {
+          console.log("cross-domain-store loaded");
+          function receiveMessage(e) {
+              console.log("iframe got message: ", e);
+              window.parent.postMessage('iframe_message: '+ localStorage._count, e.origin);
+          }
+          window.addEventListener('message', receiveMessage);
+      // }
     </script>
   </head>
   <body></body>
