@@ -1,4 +1,17 @@
-## problem statement
+
+## problem: OPTIONS request sent where it was not needed
+
+this is the most serious issue:
+
+example with youtube.
+
+- simple cors request do not need a preflight request.
+- after adding a custom header, the browser sends an unexpected preflight request
+- the server is not supposed to respond to OPTIONS and responds 400
+- the browser receives 400 and does not send the XHR
+
+
+## problem statement: OPTIONS request/response parameters
 
 ### we try to send a cross-origin XHR from www.test-cors.org to server.test-cors.org
 
@@ -95,3 +108,4 @@ So the logic is:
 - if it does check if the response contains a 'access-control-allow-headers'
    - if it does change it
    - if it does not add one
+

@@ -1,8 +1,4 @@
-(function(){
-
-
-var worker;
-
+var __fp_pb_module = (function(){
 
     var overlay_html = '<style type="text/css">' +
 '#__fp_overlay * {'+
@@ -78,6 +74,14 @@ var worker;
     // by default prompt again after n seconds
     var TIME_ALLOWED_SEC = 60;
 
+    var EXTRA_PARAM_NAME="x-fp-bp-xhr";
+
+
+    var globals = {
+        XMLHttpRequest_open:XMLHttpRequest.prototype.open,
+        fetch:window.fetch
+
+    };
 
     /**
      * mini template engine. expand variables with 'handlebar'
@@ -515,63 +519,94 @@ var worker;
         }
     }
 
+
+    function _add_url_param(url, param){
+        if (url.indexOf("?") != -1){
+            url += "&" + param;
+        }else{
+            url += "?" + param;
+        }
+        return url;
+    }
+
+
+
+    // signature:
+    //  - mandatory: method, url
+    //  - optional: async, user, password
+    function _XMLHttpRequest_open(){
+        var method = arguments[0];
+        var url = arguments[1];
+        if (method.toLowerCase() === 'get'){
+            arguments[1] = _add_url_param(url, EXTRA_PARAM_NAME);
+
+        }
+        console.log("get hook: ", arguments);
+        return globals.XMLHttpRequest_open.apply(this, arguments);
+    }
+
+    // signature:
+    // - mandatory: input (either a url or an instance of Request)
+    // - optional: init (object)
+    function _fetch(){
+        var url;
+        var init;
+
+        var input = arguments[0];
+        if (typeof(input) === 'String'){
+            var mustAddParam = true;
+
+            if (arguments.length === 2){
+                init = arguments[1];
+                mustAddParam =
+                    !("method" in init) ||
+                    (init.method.toLowerCase() === 'get');
+            }
+
+            if (mustAddParam){
+                url = _add_url_param(input, EXTRA_PARAM_NAME);
+                arguments[0] = url;
+            }
+
+        }else if (input.method.toLowerCase() === 'get'){ // input type
+            // is 'Request'
+            init = {};
+            for (var k in input){
+                if (typeof(input[k]) !== 'function' && k != 'url'){
+                    init[k] = input[k];
+                }
+            }
+            url = _add_url_param(input.url, EXTRA_PARAM_NAME);
+            arguments[0] = new Request(url, init);
+        }
+
+        console.log("fetch hook: ", arguments);
+        return globals.fetch.apply(this, arguments);
+    }
+
+
+
     /*
        this function installs hooks to intercept XHR/fetch and add a
-       custom header to inform the server that no injection should be
-       made on this request.
+       custom url parameter to inform the server that no injection
+       should be made on this request.
 
        todo:
        is it possible to hook XMLHttpRequest and fetch for service
        workers and web workers ?
 
-       note that for CORS and XMLHttpRequest (probably also fetch), if
-       a preflight request is needed, the middleman server must remove
-       our extra header from the Access-Control-Request-Headers of
-       'OPTIONS' request and add them in the 'OPTIONS' response
+       the first idea was to add a custom header instead of a custom
+       url parameter, but it does not work with cors/preflight
+       request.
      */
-
     function installHooks(){
-        var CUSTOM_HDR_NAME="X-FP-BP-NO-INJECT";
-        // XHR
-        var XMLHttpRequest_open_orig = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function(){
-            var method = arguments[0];
-            this.__fp_add_hdr = (method.toLowerCase() === 'get');
-            return XMLHttpRequest_open_orig.apply(this, arguments);
-        };
+        XMLHttpRequest.prototype.open = _XMLHttpRequest_open;
 
-        var XMLHttpRequest_send_orig = XMLHttpRequest.prototype.send;
-        XMLHttpRequest.prototype.send = function(){
-            if (this.__fp_add_hdr){
-                this.setRequestHeader(CUSTOM_HDR_NAME, "1");
-            }
-            return XMLHttpRequest_send_orig.apply(this, arguments);
-        };
-
-        // fetch
         if (window.fetch){
-            var fetch_orig = window.fetch;
-            window.fetch = function() {
-                if (arguments.length == 1){
-                    [].push.call(arguments, {});
-                }
-                var options = arguments[1];
-                if (!("method" in options) ||
-                    options.method.toLowerCase()  === 'get'){
-
-                    if (!("headers" in options)){
-                        options.headers = new Headers();
-                    }
-                    if (options.headers.append){
-                        options.headers.append(CUSTOM_HDR_NAME, "1");
-                    }else{
-                        options.headers[CUSTOM_HDR_NAME] = "1";
-                    }
-                }
-                return fetch_orig.apply(this, arguments);
-            };
+            window.fetch = _fetch;
         }
     }
+
 
     function check_timer_show_overlay(){
         console.log("in check_timer_show_overlay");
@@ -631,6 +666,14 @@ var worker;
         }
     }
 
-    main();
+    return {
+        main: main,
+        _fetch: _fetch,
+        globals: globals
+    };
 
 })();
+
+if (document.getElementById('__fp_bp_is')){
+    __fp_pb_module.main();
+}

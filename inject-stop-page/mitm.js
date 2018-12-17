@@ -19,7 +19,8 @@ const DEFAULT_CATEGORY='gambling';
 const DEFAULT_INTERVAL_SEC=10;
 
 
-const SHARED_STORE_IFRAME_URL = "https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html";
+// const SHARED_STORE_IFRAME_URL = "https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html";
+const SHARED_STORE_IFRAME_URL = "";
 
 const DEFAULT_OVERLAY_CONTENT = `
 <html>
