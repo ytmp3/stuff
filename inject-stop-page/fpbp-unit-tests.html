@@ -1,0 +1,128 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Mocha Tests</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/mocha/5.2.0/mocha.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="mocha"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/5.2.0/mocha.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/4.2.0/chai.js"></script>
+    <script src="./fpbp-src.js"></script>
+
+    <script>
+      mocha.setup('bdd');
+      // mocha.traceIgnores = ['mocha.min.js', 'chai.min.js'];
+      // expect = chai.expect;
+    </script>
+
+    <script>
+      var assert = chai.assert;
+      describe('xhr hook tests', function () {
+          __fp_pb_module.globals.fetch = function(){
+              console.log("mock fetch", arguments);
+              return arguments;
+          }
+          __fp_pb_module.globals.XMLHttpRequest_open = function(){
+              console.log("mock XMLHttpRequest_open", arguments);
+              return arguments;
+          }
+
+          it('should add a param to xhr', function () {
+              result = __fp_pb_module._XMLHttpRequest_open(
+                  "GET", "http://foo.bar.com");
+              assert(result.length==2);
+              assert(result[0] === "GET");
+              assert(result[1] === "http://foo.bar.com?x-fp-bp-xhr");
+
+              result = __fp_pb_module._XMLHttpRequest_open(
+                  "GET", "http://foo.bar.com?x=2");
+              assert(result.length==2);
+              assert(result[0] === "GET");
+              assert(result[1] === "http://foo.bar.com?x=2&x-fp-bp-xhr");
+
+          });
+          it('should NOT add a param to xhr', function () {
+              result = __fp_pb_module._XMLHttpRequest_open(
+                  "POST", "http://foo.bar.com");
+              assert(result.length==2);
+              assert(result[0] === "POST");
+              assert(result[1] === "http://foo.bar.com");
+
+          });
+          it('should add a param to fetch', function () {
+              assert(__fp_pb_module._fetch);
+              assert(__fp_pb_module.globals);
+
+              var result;
+
+              result = __fp_pb_module._fetch("http://foo.bar.com");
+              assert(result.length === 1);
+              assert(result[0] === "http://foo.bar.com?x-fp-bp-xhr");
+
+              result = __fp_pb_module._fetch("http://foo.bar2.com?x=1");
+              assert(result.length === 1);
+              assert(result[0] === "http://foo.bar2.com?x=1&x-fp-bp-xhr");
+
+              // using Request only
+              var req = new Request("http://foo.bar3.com?a=2");
+              result = __fp_pb_module._fetch(req);
+              assert(result.length === 1);
+              console.log("RES3 >>>%s<<<", result[0].url);
+              assert(result[0].url === "http://foo.bar3.com/?a=2&x-fp-bp-xhr");
+              assert(result[0].method === "GET");
+
+
+              // if specified twice, the fetch parameter takes precedence
+              var req = new Request("http://foo.bar4.com", {method:"POST"});
+              result = __fp_pb_module._fetch(req, {
+                  method: "GET"
+              });
+              assert(result.length === 2);
+              console.log("RES4 >>>%s<<<", result[0].url);
+              assert(result[0].url === "http://foo.bar4.com/?x-fp-bp-xhr");
+              assert(result[1].method === "GET");
+
+
+
+          });
+          it('should NOT add a param to fetch', function () {
+
+              var result;
+              result = __fp_pb_module._fetch("http://foo.bar5.com", {
+                  method: "POST"
+              });
+              console.log("xxxxxxxxx", result);
+              assert(result.length === 2);
+              assert(result[0] === "http://foo.bar5.com");
+              assert(result[1].method === "POST");
+
+
+              var req = new Request("http://foo.bar6.com");
+              result = __fp_pb_module._fetch(req, {
+                  method: "POST"
+              });
+              console.log("RES6", result);
+              assert(result.length === 2);
+              assert(result[0].url === "http://foo.bar6.com/");
+              assert(result[1].method === "POST");
+
+
+
+              req = new Request("http://foo.bar7.com", {method: "POST"});
+              result = __fp_pb_module._fetch(req);
+              console.log("RES7", result);
+              assert(result.length === 1);
+              assert(result[0].url === "http://foo.bar7.com/");
+              assert(result[0].method === "POST");
+
+          });
+      });
+    </script>
+
+    <script>
+      mocha.run();
+    </script>
+  </body>
+</html>

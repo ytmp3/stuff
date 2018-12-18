@@ -147,16 +147,24 @@ function getInjectedData(){
  */
 function onRequest(ctx, callback)
 {
+    if (/[\?\&]x-fp-bp-xhr$/.test(ctx.clientToProxyRequest.url)){
+        const param_len="x-fp-bp-xhr".length +1;
+        ctx.clientToProxyRequest.url =
+            ctx.clientToProxyRequest.url.slice(0, -param_len);
+        console.log("sliced url=%s", ctx.clientToProxyRequest.url);
+        ctx.no_inject = true;
+    }
+
     const headers = ctx.clientToProxyRequest.headers;
     const host = headers["host"];
     const fullUrl = '//' + host + ctx.clientToProxyRequest.url;
 
 
-    if ("x-fp-bp-no-inject" in headers){
-        console.log("!!!!!!!!!!!!!! found NO INJECT for %s", fullUrl);
-        delete headers["x-fp-bp-no-inject"];
-        ctx.no_inject = true;
-    }
+    // if ("x-fp-bp-no-inject" in headers){
+    //     console.log("!!!!!!!!!!!!!! found NO INJECT for %s", fullUrl);
+    //     delete headers["x-fp-bp-no-inject"];
+    //     ctx.no_inject = true;
+    // }
 
     if ("access-control-request-headers" in headers){
         const acl_hdr = headers["access-control-request-headers"];

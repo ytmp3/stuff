@@ -2,3 +2,4 @@ node_modules
 .http-mitm-proxy
 *keep*
 *.pem
+inject-stop-page/fpbp.js

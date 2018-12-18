@@ -550,10 +550,9 @@ var __fp_pb_module = (function(){
     // - optional: init (object)
     function _fetch(){
         var url;
-        var init;
-
         var input = arguments[0];
-        if (typeof(input) === 'String'){
+        var init;
+        if (typeof(input) === 'string'){
             var mustAddParam = true;
 
             if (arguments.length === 2){
@@ -568,19 +567,35 @@ var __fp_pb_module = (function(){
                 arguments[0] = url;
             }
 
-        }else if (input.method.toLowerCase() === 'get'){ // input type
-            // is 'Request'
-            init = {};
-            for (var k in input){
-                if (typeof(input[k]) !== 'function' && k != 'url'){
-                    init[k] = input[k];
+        }else{
+            /* if fetch has a second parameter, the values of this
+             * second parameter take precedence over the Request parameter
+             */
+            var method = "get";
+            if (arguments.length === 2){
+                init = arguments[1];
+                if ("method" in init){
+                    method = init.method;
                 }
+            }else{
+                // implicit value is 'get' or explicit value
+                method = input.method;
             }
-            url = _add_url_param(input.url, EXTRA_PARAM_NAME);
-            arguments[0] = new Request(url, init);
+
+            if (method.toLowerCase() === 'get'){
+                // Since input type is not a string, we assume input type
+                // is 'Request'
+                var req_init = {};
+                for (var k in input){
+                    if (typeof(input[k]) !== 'function' && k != 'url'){
+                        req_init[k] = input[k];
+                    }
+                }
+                url = _add_url_param(input.url, EXTRA_PARAM_NAME);
+                arguments[0] = new Request(url, req_init);
+            }
         }
 
-        console.log("fetch hook: ", arguments);
         return globals.fetch.apply(this, arguments);
     }
 
@@ -669,9 +684,9 @@ var __fp_pb_module = (function(){
     return {
         main: main,
         _fetch: _fetch,
+        _XMLHttpRequest_open : _XMLHttpRequest_open,
         globals: globals
     };
-
 })();
 
 if (document.getElementById('__fp_bp_is')){
