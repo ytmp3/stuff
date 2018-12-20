@@ -464,8 +464,8 @@ var __fp_pb_module = (function(){
         if (!shared_domain_iframe){
             shared_domain_iframe = document.createElement("iframe");
             shared_domain_iframe.setAttribute("src", url);
-            shared_domain_iframe.width = "10px";
-            shared_domain_iframe.height =  "10px";
+            shared_domain_iframe.width = "0";
+            shared_domain_iframe.height =  "0";
             shared_domain_iframe.id = "__fp_shif";
             document.documentElement.appendChild(shared_domain_iframe);
 

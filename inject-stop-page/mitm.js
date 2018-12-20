@@ -19,8 +19,8 @@ const DEFAULT_CATEGORY='gambling';
 const DEFAULT_INTERVAL_SEC=10;
 
 
-// const SHARED_STORE_IFRAME_URL = "https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html";
-const SHARED_STORE_IFRAME_URL = "";
+const SHARED_STORE_IFRAME_URL = "https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html";
+// const SHARED_STORE_IFRAME_URL = "";
 
 const DEFAULT_OVERLAY_CONTENT = `
 <html>
@@ -160,26 +160,6 @@ function onRequest(ctx, callback)
     const fullUrl = '//' + host + ctx.clientToProxyRequest.url;
 
 
-    // if ("x-fp-bp-no-inject" in headers){
-    //     console.log("!!!!!!!!!!!!!! found NO INJECT for %s", fullUrl);
-    //     delete headers["x-fp-bp-no-inject"];
-    //     ctx.no_inject = true;
-    // }
-
-    if ("access-control-request-headers" in headers){
-        const acl_hdr = headers["access-control-request-headers"];
-        console.log("found access-control-request-headers: %s", acl_hdr);
-
-        const new_acl_hdr = acl_hdr.split(/,\s*/).
-              filter( (e, i)=>{ return e!=="x-fp-bp-no-inject"; }).
-              join(",");
-
-        headers["access-control-request-headers"] = new_acl_hdr;
-        console.log("rewrite access-control-request-headers: %s", new_acl_hdr);
-    }
-
-    // console.log("onRequest: ", fullUrl);
-
     const isFakeServer = fullUrl.startsWith("//www.example.com");
 
     if (isFakeServer || fullUrl.startsWith("//www.forcepoint.com/blockpage_poc")){
@@ -210,10 +190,6 @@ function onRequest(ctx, callback)
 
             headers["Content-Security-Policy"] = ["script-src 'self' https://code.jquery.com 'sha256-GoCTp92A/44wB06emgkrv9wmZJA7kgX/VK3D+9jr/Pw='", "script-src https://www.forcepoint.com"];
 
-
-            // if (mimeType.startsWith('text/html')){
-            //     content = INJECTED_URL_DATA2 + content;
-            // }
         }
 
         ctx.proxyToClientResponse.writeHead(responseCode, headers);
@@ -248,20 +224,6 @@ function onResponse(ctx, callback)
      * certificates for that site from going unnoticed.
      */
     delete resp_headers['expect-ct'];
-
-    // for cors preflight response, note that this header can also be
-    // present even if this is not a preflight OPTIONS message and not
-    // event a cors (example regular request to
-    // https://www.wikipedia.org/), but I think this is safe to always add the
-    // access-control-allow-headers
-    if ('access-control-allow-origin' in resp_headers){
-        if ('access-control-allow-headers' in resp_headers){
-            resp_headers['access-control-allow-headers'] += ",x-fp-bp-no-inject";
-        }else{
-            resp_headers['access-control-allow-headers'] = "x-fp-bp-no-inject";
-        }
-        console.log("fix cors acl hdr: %s", resp_headers['access-control-allow-headers']);
-    }
 
 
     // note: headers converted to lowercase by nodejs
