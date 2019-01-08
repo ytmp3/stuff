@@ -55,7 +55,7 @@ var __fp_pb_module = (function(){
 '</dialog>';
 
 
-    var SHIF ='<iframe  id="__fp_shif" src="https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html"></iframe>';
+    // var SHIF ='<iframe  id="__fp_shif" src="https://www.forcepoint.com/blockpage_poc/fpbpstore-src.html"></iframe>';
 
     var DEFAULT_OVERLAY_CONTENT =
 '<html>' +
@@ -74,11 +74,11 @@ var __fp_pb_module = (function(){
     // by default prompt again after n seconds
     var TIME_ALLOWED_SEC = 60;
 
-    var EXTRA_PARAM_NAME="x-fp-bp-xhr";
-
+    var CUSTOM_HDR_NAME="x-fp-bp-no-inject";
 
     var globals = {
         XMLHttpRequest_open:XMLHttpRequest.prototype.open,
+        XMLHttpRequest_send:XMLHttpRequest.prototype.send,
         fetch:window.fetch
 
     };
@@ -520,80 +520,112 @@ var __fp_pb_module = (function(){
     }
 
 
-    function _add_url_param(url, param){
-        if (url.indexOf("?") != -1){
-            url += "&" + param;
-        }else{
-            url += "?" + param;
-        }
-        return url;
+    /* _parse_url, returns a URL object
+
+       eg
+       res = _parse_url("https://foo.com:13443/bli/bla")
+       res.host
+       "foo.com:13443"
+     */
+    function _parse_url(url){
+        var l = document.createElement("a");
+        l.href = url;
+        return l;
     }
 
+    // return true if the xhr is not cross-origin
+    function _is_same_origin(url){
+        var parsed_url = _parse_url(url);
+        return (parsed_url.origin === document.location.origin);
+    }
 
-
-    // signature:
-    //  - mandatory: method, url
-    //  - optional: async, user, password
+    /*
+     * wrapper for XMLHttpRequest.open
+     *
+     * checks if we must add a 'do not inject' header.
+     *
+     *  basically, it has to be a 'GET' that is not cross-domain
+     *   (injecting custom headers in a cross-domain XHR triggers a
+     *   preflight 'OPTIONS' request that the server might not expect).
+     *
+     * function arguments:
+     * - mandatory: method, url
+     * - optional: async, user, password
+     */
     function _XMLHttpRequest_open(){
         var method = arguments[0];
         var url = arguments[1];
-        if (method.toLowerCase() === 'get'){
-            arguments[1] = _add_url_param(url, EXTRA_PARAM_NAME);
 
-        }
-        console.log("get hook: ", arguments);
+        // at this point, we do not yet have access to the headers, so
+        // we simply store in '__fp_add_hdr' the decision to inject a
+        // custom header
+        this.__fp_add_hdr = (method.toLowerCase() === 'get' &&
+                             _is_same_origin(url));
         return globals.XMLHttpRequest_open.apply(this, arguments);
+    };
+
+    /*
+     * wrapper for XMLHttpRequest.send
+     *
+     * based on the decision made in _XMLHttpRequest_open, add a
+     * custom header that tells the inspection not to inject
+     * the blockpage javascript logic.
+     */
+    function _XMLHttpRequest_send(){
+        if (this.__fp_add_hdr){
+            this.setRequestHeader(CUSTOM_HDR_NAME, "1");
+        }
+        return globals.XMLHttpRequest_send.apply(this, arguments);
+
     }
 
-    // signature:
-    // - mandatory: input (either a url or an instance of Request)
-    // - optional: init (object)
+    /*
+     * wrapper for window.fetch
+     *
+     * function arguments:
+     * - mandatory: input (either a url or an instance of Request)
+     * - optional: init (object)
+     */
     function _fetch(){
-        var url;
         var input = arguments[0];
+
+        var url;
         var init;
+        var method = 'get';
+
         if (typeof(input) === 'string'){
-            var mustAddParam = true;
-
-            if (arguments.length === 2){
-                init = arguments[1];
-                mustAddParam =
-                    !("method" in init) ||
-                    (init.method.toLowerCase() === 'get');
-            }
-
-            if (mustAddParam){
-                url = _add_url_param(input, EXTRA_PARAM_NAME);
-                arguments[0] = url;
-            }
-
+            url = input;
         }else{
-            /* if fetch has a second parameter, the values of this
-             * second parameter take precedence over the Request parameter
-             */
-            var method = "get";
-            if (arguments.length === 2){
-                init = arguments[1];
-                if ("method" in init){
-                    method = init.method;
-                }
+            // typeof input is Request
+            url = input.url;
+            method = input.method;
+        }
+
+        /* if fetch has a second parameter, the values of this second
+         * parameter take precedence over the Request parameters
+         */
+        if (arguments.length === 2){
+            init = arguments[1];
+            if ("method" in init){
+                method = init.method;
+            }
+        }
+
+        if (_is_same_origin(url) && method.toLowerCase() === 'get'){
+            if (arguments.length == 1){
+                [].push.call(arguments, {});
+            }
+            init = arguments[1];
+
+            if (!("headers" in init)){
+                init.headers = new Headers();
+            }
+            if (init.headers.append){
+                init.headers.append(CUSTOM_HDR_NAME, "1");
             }else{
-                // implicit value is 'get' or explicit value
-                method = input.method;
+                init.headers[CUSTOM_HDR_NAME] = "1";
             }
 
-            if (method.toLowerCase() === 'get'){
-                // Since input type is not a string, we assume input type
-                // is 'Request'
-                var req_init = {};
-                for (var k in input){
-                    if (typeof(input[k]) !== 'function' && k != 'url'){
-                        req_init[k] = input[k];
-                    }
-                }
-                url = _add_url_param(input.url, EXTRA_PARAM_NAME);
-                arguments[0] = new Request(url, req_init);
-            }
         }
 
         return globals.fetch.apply(this, arguments);
@@ -603,19 +635,21 @@ var __fp_pb_module = (function(){
 
     /*
        this function installs hooks to intercept XHR/fetch and add a
-       custom url parameter to inform the server that no injection
-       should be made on this request.
+       custom header 'x-fp-bp-no-inject' to inform the inspection that
+       no injection should be made on this request.
 
-       todo:
-       is it possible to hook XMLHttpRequest and fetch for service
-       workers and web workers ?
+       Note that this custom header is not injected in case of
+       cross-domain request because custom header in cors request
+       trigger a preflight request, which might not be handled by the
+       backend.
 
-       the first idea was to add a custom header instead of a custom
-       url parameter, but it does not work with cors/preflight
-       request.
+       So in case of cross-domain request, the inspection has to check
+       for the presence of the 'origin' header and must not inject if
+       found.
      */
     function installHooks(){
         XMLHttpRequest.prototype.open = _XMLHttpRequest_open;
+        XMLHttpRequest.prototype.send = _XMLHttpRequest_send;
 
         if (window.fetch){
             window.fetch = _fetch;
@@ -650,13 +684,30 @@ var __fp_pb_module = (function(){
 
     /**
      * entry point of this module. Note that the code is executed
-     * immediately.
+     * immediately (not on the 'load' event)
      *
      * We do not wait for the page to load, so we are
      * able to stop the loading process to display the overlay, which
      * limits the side-effects of the page loading in the background
      * (such as audio starting to play, notifications popup appearing,
      * RGPD consent popup and so on...)
+     *
+     * It is also possible to use an iframe to share the timer value
+     * between pages. The iframe is obtained from 'shared_domain_url'
+     * data property. If using this iframe, the approach described
+     * above does not work because:
+
+     * 1. the iframe won't load synchronously
+     * 2. retrieving the shared timer from the iframe is an async mechanism,
+     *    which means this javascript module finishes before we know if the
+     *    page loading must be stopped.
+     *
+     * so, with a shared iframe approach, we don't prevent the page
+     * from loading. The overlay will be displayed on top of the
+     * loaded page with the possible side-effect described above
+     * (audio starting to play, notifications popup possibly appearing
+     * on top of our own overlay)
+     *
      */
     function main(){
         installHooks();
@@ -685,6 +736,7 @@ var __fp_pb_module = (function(){
         main: main,
         _fetch: _fetch,
         _XMLHttpRequest_open : _XMLHttpRequest_open,
+        _XMLHttpRequest_send : _XMLHttpRequest_send,
         globals: globals
     };
 })();

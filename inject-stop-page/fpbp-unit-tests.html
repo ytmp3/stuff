@@ -24,100 +24,150 @@
               console.log("mock fetch", arguments);
               return arguments;
           }
-          __fp_pb_module.globals.XMLHttpRequest_open = function(){
-              console.log("mock XMLHttpRequest_open", arguments);
+          // __fp_pb_module.globals.XMLHttpRequest_open = function(){
+          //     console.log("mock XMLHttpRequest_open", arguments);
+          //     return arguments;
+          // }
+
+          __fp_pb_module.globals.XMLHttpRequest_send = function(){
+              console.log("mock XMLHttpRequest_send", this, arguments);
               return arguments;
           }
 
-          it('should add a param to xhr', function () {
-              result = __fp_pb_module._XMLHttpRequest_open(
-                  "GET", "http://foo.bar.com");
-              assert(result.length==2);
-              assert(result[0] === "GET");
-              assert(result[1] === "http://foo.bar.com?x-fp-bp-xhr");
+          XMLHttpRequest.prototype.open = __fp_pb_module._XMLHttpRequest_open;
+          XMLHttpRequest.prototype.send = __fp_pb_module._XMLHttpRequest_send;
 
-              result = __fp_pb_module._XMLHttpRequest_open(
-                  "GET", "http://foo.bar.com?x=2");
-              assert(result.length==2);
-              assert(result[0] === "GET");
-              assert(result[1] === "http://foo.bar.com?x=2&x-fp-bp-xhr");
 
+          it('should add a header to xhr', function () {
+              var req = new XMLHttpRequest();
+              req.open("GET", window.location.href);
+              var result = req.send(null);
+              assert(req.__fp_add_hdr);
           });
-          it('should NOT add a param to xhr', function () {
-              result = __fp_pb_module._XMLHttpRequest_open(
-                  "POST", "http://foo.bar.com");
-              assert(result.length==2);
-              assert(result[0] === "POST");
-              assert(result[1] === "http://foo.bar.com");
 
+          it('should NOT add a header to xhr (not a GET)', function () {
+              var req = new XMLHttpRequest();
+              req.open("POST", window.location.href);
+              var result = req.send(null);
+              assert(!req.__fp_add_hdr);
           });
-          it('should add a param to fetch', function () {
+
+          it('should NOT add a header to xhr (CORS)', function () {
+              var req = new XMLHttpRequest();
+              req.open("GET", "http://foo.com");
+              var result = req.send(null);
+              assert(!req.__fp_add_hdr);
+          });
+
+
+
+          it('should add a header to fetch', function () {
               assert(__fp_pb_module._fetch);
               assert(__fp_pb_module.globals);
 
               var result;
-
-              result = __fp_pb_module._fetch("http://foo.bar.com");
-              assert(result.length === 1);
-              assert(result[0] === "http://foo.bar.com?x-fp-bp-xhr");
-
-              result = __fp_pb_module._fetch("http://foo.bar2.com?x=1");
-              assert(result.length === 1);
-              assert(result[0] === "http://foo.bar2.com?x=1&x-fp-bp-xhr");
-
-              // using Request only
-              var req = new Request("http://foo.bar3.com?a=2");
-              result = __fp_pb_module._fetch(req);
-              assert(result.length === 1);
-              console.log("RES3 >>>%s<<<", result[0].url);
-              assert(result[0].url === "http://foo.bar3.com/?a=2&x-fp-bp-xhr");
-              assert(result[0].method === "GET");
+              result = __fp_pb_module._fetch(window.location.href);
+              assert(result.length === 2);
+              assert(result[0] === window.location.href);
+              assert(result[1].headers.get("x-fp-bp-no-inject") === "1");
+          });
 
 
-              // if specified twice, the fetch parameter takes precedence
-              var req = new Request("http://foo.bar4.com", {method:"POST"});
-              result = __fp_pb_module._fetch(req, {
-                  method: "GET"
+          it('should add a header to fetch with existing headers dict', function () {
+              result = __fp_pb_module._fetch(window.location.href, {
+                  headers : {
+                      'x-foo': 8
+                  }
               });
               assert(result.length === 2);
-              console.log("RES4 >>>%s<<<", result[0].url);
-              assert(result[0].url === "http://foo.bar4.com/?x-fp-bp-xhr");
-              assert(result[1].method === "GET");
-
-
-
+              assert(result[0] === window.location.href);
+              assert(result[1].headers["x-foo"] == 8);
+              assert(result[1].headers["x-fp-bp-no-inject"] === "1");
           });
+
+
+          it('should add a header to fetch with existing headers class', function () {
+              var myHeaders = new Headers();
+              myHeaders.append("Content-Type", "text/foo");
+              result = __fp_pb_module._fetch(window.location.href, {
+                  headers : myHeaders
+              });
+              assert(result.length === 2);
+              assert(result[0] === window.location.href);
+              assert(result[1].headers.get("Content-Type") == "text/foo");
+              assert(result[1].headers.get("x-fp-bp-no-inject") === "1");
+          });
+
+
+
+
+
+          //     // using Request only
+          //     var req = new Request("http://foo.bar3.com?a=2");
+          //     result = __fp_pb_module._fetch(req);
+          //     assert(result.length === 1);
+          //     console.log("RES3 >>>%s<<<", result[0].url);
+          //     assert(result[0].url === "http://foo.bar3.com/?a=2&x-fp-bp-xhr");
+          //     assert(result[0].method === "GET");
+
+
+          //     // if specified twice, the fetch parameter takes precedence
+          //     var req = new Request("http://foo.bar4.com", {method:"POST"});
+          //     result = __fp_pb_module._fetch(req, {
+          //         method: "GET"
+          //     });
+          //     assert(result.length === 2);
+          //     console.log("RES4 >>>%s<<<", result[0].url);
+          //     assert(result[0].url === "http://foo.bar4.com/?x-fp-bp-xhr");
+          //     assert(result[1].method === "GET");
+
+
+
           it('should NOT add a param to fetch', function () {
-
               var result;
-              result = __fp_pb_module._fetch("http://foo.bar5.com", {
-                  method: "POST"
-              });
-              console.log("xxxxxxxxx", result);
-              assert(result.length === 2);
-              assert(result[0] === "http://foo.bar5.com");
-              assert(result[1].method === "POST");
-
-
-              var req = new Request("http://foo.bar6.com");
-              result = __fp_pb_module._fetch(req, {
-                  method: "POST"
-              });
-              console.log("RES6", result);
-              assert(result.length === 2);
-              assert(result[0].url === "http://foo.bar6.com/");
-              assert(result[1].method === "POST");
-
-
-
-              req = new Request("http://foo.bar7.com", {method: "POST"});
-              result = __fp_pb_module._fetch(req);
-              console.log("RES7", result);
+              // not added (cors)
+              result = __fp_pb_module._fetch("http://bar.com/bla?x=8");
               assert(result.length === 1);
-              assert(result[0].url === "http://foo.bar7.com/");
-              assert(result[0].method === "POST");
+              assert(result[0] === "http://bar.com/bla?x=8");
+
+              // not added (method is not GET)
+              result = __fp_pb_module._fetch(window.location.href, {method:"POST"});
+              assert(result.length === 2);
+              assert(result[0] === window.location.href);
+              assert(!result[1].headers);
 
           });
+
+
+          //     var result;
+          //     result = __fp_pb_module._fetch("http://foo.bar5.com", {
+          //         method: "POST"
+          //     });
+          //     console.log("xxxxxxxxx", result);
+          //     assert(result.length === 2);
+          //     assert(result[0] === "http://foo.bar5.com");
+          //     assert(result[1].method === "POST");
+
+
+          //     var req = new Request("http://foo.bar6.com");
+          //     result = __fp_pb_module._fetch(req, {
+          //         method: "POST"
+          //     });
+          //     console.log("RES6", result);
+          //     assert(result.length === 2);
+          //     assert(result[0].url === "http://foo.bar6.com/");
+          //     assert(result[1].method === "POST");
+
+
+
+          //     req = new Request("http://foo.bar7.com", {method: "POST"});
+          //     result = __fp_pb_module._fetch(req);
+          //     console.log("RES7", result);
+          //     assert(result.length === 1);
+          //     assert(result[0].url === "http://foo.bar7.com/");
+          //     assert(result[0].method === "POST");
+
+          // });
       });
     </script>
 

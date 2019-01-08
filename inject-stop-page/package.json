@@ -5,8 +5,7 @@
     "main": "injected_page.js",
     "scripts": {
         "start": "node ./node_modules/.bin/uglifyjs --compress --mangle -o ./fpbp.js -- ./fpbp-src.js  && node mitm.js",
-        "dev": "export Node_ENV=development && ./node_modules/.bin/nodemon mitm.js",
-        "foo": "ls"
+        "dev": "export Node_ENV=development && ./node_modules/.bin/nodemon mitm.js"
     },
     "author": "",
     "license": "ISC",

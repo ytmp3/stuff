@@ -4,6 +4,7 @@ const Policy = require('./csp-parse');
 const crypto = require('crypto');
 const mime = require('mime');
 const Proxy = require('http-mitm-proxy');
+const url = require('url');
 
 const process = require('process');
 const fs = require('fs');
@@ -134,7 +135,7 @@ function getInjectedData(){
         return INJECTED_URL_DATA;
     }else{
         const content = getInjectedContent();
-        const INJECTED_SCRIPT_DATA = `<!DOCTYPE html><script id="__fp_bp_is" data-interval_sec="${interval_sec}" data-content="${overlay_content}" data-category="${category}" data-shared_domain_url="${SHARED_STORE_IFRAME_URL}">${content}</script>\n`;
+        const INJECTED_SCRIPT_DATA = `<!DOCTYPE html><script  id="__fp_bp_is" data-interval_sec="${interval_sec}" data-content="${overlay_content}" data-category="${category}" data-shared_domain_url="${SHARED_STORE_IFRAME_URL}">${content}</script>\n`;
         return INJECTED_SCRIPT_DATA;
 
     }
@@ -142,7 +143,7 @@ function getInjectedData(){
 
 
 /**
- * handle request header from server
+ * handle request header from browser
  *
  */
 function onRequest(ctx, callback)
@@ -240,34 +241,49 @@ function onResponse(ctx, callback)
     {
         delete resp_headers['content-length'];
         const csp = resp_headers['content-security-policy'];
+        const default_csp = csp;
 
         delete resp_headers['etag'];
         delete resp_headers['last-modified'];
+
         if (csp){
             const policy = new Policy(csp);
-            const script = policy.get('script-src');
-            if (script){
-                if (INJECTION_METHOD === 'url'){
-                    const url = new URL(INJECTED_SCRIPT_URL);
-                    policy.add('script-src', url.origin);
-                    const modified_csp = policy.toString();
-                    console.log("\n\n### orig csp: %s", csp);
-                    console.log("### modified csp: %s", modified_csp);
-                    resp_headers['content-security-policy'] = modified_csp;
-                }else{
-                    if (script.indexOf('unsafe-inline') == -1){
-                        const sha256 = getInjectedHash();
-                        policy.add('script-src', "'"+sha256+"'");
-                        const modified_csp = policy.toString();
-                        console.log("\n\n### orig csp: %s", csp);
-                        console.log("### modified csp: %s", modified_csp);
-                        resp_headers['content-security-policy'] = modified_csp;
-                    }
-                    // resp_headers['content-security-policy'] = csp;
+            const script_src = policy.get('script-src');
+            const frm_src = policy.get('frame-src');
+            const default_src = policy.get('default-src');
+
+            // inject script as inline content
+            if (SHARED_STORE_IFRAME_URL.length){
+                const ifr_url = new URL(SHARED_STORE_IFRAME_URL);
+
+                if (!frm_src && default_src){
+                    policy.set('frame-src', default_src);
                 }
+                policy.add('frame-src', ifr_url.origin);
             }
-        }
-    }
+
+            let script_inject_data;
+            if (INJECTION_METHOD === 'url'){
+                const url = new URL(INJECTED_SCRIPT_URL);
+                script_inject_data = url.origin;
+            }else{
+                //
+                const sha256 = getInjectedHash();
+                script_inject_data = "'"+sha256+"'";
+            }
+
+
+            if (!script_src && default_src){
+                policy.set('script-src', default_src);
+            }
+            policy.add('script-src', script_inject_data);
+
+            let modified_csp = policy.toString();
+            console.log("\n\n### orig csp: %s", default_csp);
+            console.log("### modified csp: %s", modified_csp);
+            resp_headers['content-security-policy'] = modified_csp;
+        }//end if csp
+    }// end if must_inject
     return callback();
 }
 
